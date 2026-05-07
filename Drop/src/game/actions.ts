@@ -2,20 +2,127 @@
 import { getDropState, saveDropState } from './state';
 import type { CardRank, DropGameState } from './types';
 
+// ---------------------------------------------------------------------------
+// PHASE TRANSITION HELPERS
+// ---------------------------------------------------------------------------
+
 /**
- * PHASE 1 & SETUP: Deals cards, sets up the table, and deducts the initial ante.
+ * Returns the list of players still active (not dead, not folded).
  */
+function getActivePlayers(state: DropGameState): string[] {
+    return state.turnOrder.filter(
+        id => !state.players[id].isDead && !state.players[id].hasFolded
+    );
+}
+
+/**
+ * Advances currentTurnIndex to the next active player, tracks round completion,
+ * and handles phase transitions (TheClimb → Battle → Judgement).
+ *
+ * Returns true if the game should immediately transition into Judgement scoring
+ * (i.e. the caller should call evaluateJudgementSync before saving).
+ */
+function advanceTurn(state: DropGameState): boolean {
+    const activePlayers = getActivePlayers(state);
+    if (activePlayers.length === 0) return true;
+
+    state.turnsInCurrentRound++;
+
+    // --- Round boundary: every active player has acted once ---
+    if (state.turnsInCurrentRound >= activePlayers.length) {
+        state.turnsInCurrentRound = 0;
+
+        if (state.phase === 'TheClimb') {
+            state.climbRoundCount++;
+
+            if (state.climbRoundCount >= 2) {
+                // Two full Climb rounds done → enter Battle phase
+                state.phase = 'Battle';
+                state.climbRoundCount = 0;
+                // Reset turn to the hand leader for the Battle round
+                state.currentTurnIndex = state.handLeaderIndex;
+                return false;
+            }
+        } else if (state.phase === 'Battle') {
+            // One Battle round done → go straight to Judgement
+            state.phase = 'Judgement';
+            return true; // signal caller to score
+        }
+    }
+
+    // Advance to next active player (skip dead / folded)
+    do {
+        state.currentTurnIndex = (state.currentTurnIndex + 1) % state.turnOrder.length;
+    } while (
+        state.players[state.turnOrder[state.currentTurnIndex]].isDead ||
+        state.players[state.turnOrder[state.currentTurnIndex]].hasFolded
+        );
+
+    return false;
+}
+
+/**
+ * Synchronous judgement evaluation — mutates state directly so the caller can
+ * persist everything in a single saveDropState() call.
+ */
+function evaluateJudgementSync(state: DropGameState): void {
+    state.phase = 'Judgement';
+
+    let activePlayers = state.turnOrder
+        .map(id => state.players[id])
+        .filter(p => !p.isDead && !p.hasFolded);
+
+    // Opposing Barons Clause: 2+ different Baron cards cancel each other out
+    for (const player of activePlayers) {
+        const baronNames = new Set(
+            player.hand.filter(c => c.rank === 'Baron').map(c => c.name)
+        );
+        if (baronNames.size >= 2) {
+            player.isDead = true;
+        }
+    }
+
+    activePlayers = activePlayers.filter(p => !p.isDead);
+
+    if (activePlayers.length === 0) return;
+
+    const scores = activePlayers.map(player => ({
+        id: player.id,
+        score: player.hand.reduce((sum, c) => sum + c.value, 0),
+        antePaid: player.antePaid
+    }));
+
+    const highestScore = Math.max(...scores.map(s => s.score));
+    const lowestScore  = Math.min(...scores.map(s => s.score));
+
+    const barons    = scores.filter(s => s.score === highestScore);
+    const survivors = scores.filter(s => s.score === lowestScore && lowestScore !== highestScore);
+
+    // Barons split the pot
+    if (barons.length > 0) {
+        state.pot = 0; // Pot awarded; persist wallet changes separately in real impl
+    }
+
+    // Survivors reclaim their ante
+    for (const surv of survivors) {
+        state.pot = Math.max(0, state.pot - surv.antePaid);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// SETUP
+// ---------------------------------------------------------------------------
+
 export async function startHand(channelId: string, anteAmount: number): Promise<boolean> {
     const state = await getDropState(channelId);
     if (!state || state.phase !== 'Setup') return false;
 
-    // Deduct ante from all players and add to pot
     for (const playerId of state.turnOrder) {
         const player = state.players[playerId];
-        player.antePaid += anteAmount;
-        state.pot += anteAmount;
-        player.isDead = false;
-        player.hasFolded = false;
+        player.antePaid  += anteAmount;
+        state.pot        += anteAmount;
+        player.isDead     = false;
+        player.hasFolded  = false;
     }
     state.currentAnteToCall = anteAmount;
 
@@ -24,35 +131,28 @@ export async function startHand(channelId: string, anteAmount: number): Promise<
         state.players[playerId].hand = state.drawPile.splice(0, 3);
     }
 
-    // Set up Discard and Fallen piles (1 card each)
+    // Seed discard and fallen piles
     state.discardPile.push(state.drawPile.shift()!);
     state.fallenPile.push(state.drawPile.shift()!);
 
-    state.phase = 'TheClimb';
-    state.currentTurnIndex = state.handLeaderIndex;
-    state.climbRoundCount = 1;
+    state.phase               = 'TheClimb';
+    state.currentTurnIndex    = state.handLeaderIndex;
+    state.climbRoundCount     = 0;
+    state.turnsInCurrentRound = 0;
 
     await saveDropState(channelId, state);
     return true;
 }
 
-/**
- * HELPER: Advances the turn to the next active player.
- */
-function advanceTurn(state: DropGameState) {
-    do {
-        state.currentTurnIndex = (state.currentTurnIndex + 1) % state.turnOrder.length;
-    } while (
-        state.players[state.turnOrder[state.currentTurnIndex]].isDead ||
-        state.players[state.turnOrder[state.currentTurnIndex]].hasFolded
-        );
-}
+// ---------------------------------------------------------------------------
+// ACTIONS
+// ---------------------------------------------------------------------------
 
-/**
- * ACTION: Scavenge
- * Swap a card from your hand with the top of the discard, fallen, or draw pile (if allowed).
- */
-export async function performScavenge(channelId: string, playerId: string, cardToDiscardId: string, source: 'discard' | 'fallen' | 'draw'): Promise<boolean> {
+/** Scavenge: swap one card from hand with the top of discard, or fallen pile. */
+export async function performScavenge(
+    channelId: string, playerId: string,
+    cardToDiscardId: string, source: 'discard' | 'fallen' | 'draw'
+): Promise<boolean> {
     const state = await getDropState(channelId);
     if (!state || state.turnOrder[state.currentTurnIndex] !== playerId) return false;
 
@@ -60,144 +160,163 @@ export async function performScavenge(channelId: string, playerId: string, cardT
     const cardIndex = player.hand.findIndex(c => c.id === cardToDiscardId);
     if (cardIndex === -1) return false;
 
-    // Discard chosen card
-    const discardedCard = player.hand.splice(cardIndex, 1)[0];
-    discardedCard.isRevealed = true; // Revealed temporarily in front
-    state.discardPile.push(discardedCard);
+    const discarded = player.hand.splice(cardIndex, 1)[0];
+    discarded.isRevealed = true;
+    state.discardPile.push(discarded);
 
-    // Draw from chosen source
-    let drawnCard;
-    if (source === 'discard') {
-        drawnCard = state.discardPile.pop()!;
-    } else if (source === 'fallen') {
-        drawnCard = state.fallenPile.pop()!;
-    } else {
-        drawnCard = state.drawPile.shift()!; // Allow pulling from draw pile
-    }
+    let drawn;
+    if (source === 'discard')       drawn = state.discardPile.pop()!;
+    else                           drawn = state.fallenPile.pop()!;
 
-    player.hand.push(drawnCard);
+    drawn.isRevealed = false;
+    player.hand.push(drawn);
 
-    advanceTurn(state);
+    const judge = advanceTurn(state);
+    if (judge) evaluateJudgementSync(state);
+
     await saveDropState(channelId, state);
     return true;
 }
 
-/**
- * ACTION: Dive
- * Discard 2 cards, pay extra ante, draw 2. First is revealed.
- */
-export async function performDive(channelId: string, playerId: string, discardIds: [string, string]): Promise<boolean> {
+/** Dive: discard 2 cards, pay extra ante, draw 2 (first revealed). */
+export async function performDive(
+    channelId: string, playerId: string,
+    discardIds: string[]
+): Promise<boolean> {
     const state = await getDropState(channelId);
     if (!state || state.turnOrder[state.currentTurnIndex] !== playerId) return false;
+    if (discardIds.length !== 2) return false;
 
     const player = state.players[playerId];
 
-    // Pay extra ante
-    player.antePaid += state.currentAnteToCall;
-    state.pot += state.currentAnteToCall;
+    // Validate both cards exist in hand
+    const validIds = discardIds.filter(id => player.hand.some(c => c.id === id));
+    if (validIds.length !== 2) return false;
 
-    // Discard 2
-    const keepHand = player.hand.filter(c => !discardIds.includes(c.id));
+    player.antePaid += state.currentAnteToCall;
+    state.pot       += state.currentAnteToCall;
+
     const discarded = player.hand.filter(c => discardIds.includes(c.id));
-    player.hand = keepHand;
+    player.hand     = player.hand.filter(c => !discardIds.includes(c.id));
     state.discardPile.push(...discarded);
 
-    // Draw 2
+    if (state.drawPile.length < 2) return false;
+
     const drawn1 = state.drawPile.shift()!;
     const drawn2 = state.drawPile.shift()!;
 
-    // Reveal rules: if they don't already have a revealed card, reveal the first drawn
-    if (!player.hand.some(c => c.isRevealed)) {
-        drawn1.isRevealed = true;
-    }
+    // Reveal the first drawn card unless the player already has a revealed card
+    // (Revealed-Dive special case from the rules)
+    const alreadyHasRevealed = player.hand.some(c => c.isRevealed);
+    drawn1.isRevealed = !alreadyHasRevealed;
+    drawn2.isRevealed = false;
 
     player.hand.push(drawn1, drawn2);
 
-    advanceTurn(state);
+    const judge = advanceTurn(state);
+    if (judge) evaluateJudgementSync(state);
+
     await saveDropState(channelId, state);
     return true;
 }
 
-/**
- * ACTION: Ascend
- * Raise the stakes. Table must match or fold.
- */
-export async function performAscend(channelId: string, playerId: string, raiseAmount: number): Promise<boolean> {
+/** Ascend: raise the pot; others must call or fold. In Battle, anyone may Ascend. */
+export async function performAscend(
+    channelId: string, playerId: string,
+    raiseAmount: number
+): Promise<boolean> {
     const state = await getDropState(channelId);
     if (!state || state.turnOrder[state.currentTurnIndex] !== playerId) return false;
+    if (state.phase !== 'TheClimb' && state.phase !== 'Battle') return false;
 
     state.currentAnteToCall += raiseAmount;
     const player = state.players[playerId];
-    player.antePaid += state.currentAnteToCall;
-    state.pot += state.currentAnteToCall;
+    player.antePaid += raiseAmount;
+    state.pot       += raiseAmount;
 
-    advanceTurn(state);
+    const judge = advanceTurn(state);
+    if (judge) evaluateJudgementSync(state);
+
     await saveDropState(channelId, state);
     return true;
 }
 
-/**
- * ACTION: Snitch
- * Force a target to reveal their highest or lowest card.
- */
-export async function performSnitch(channelId: string, playerId: string, targetId: string, type: 'High' | 'Low'): Promise<boolean> {
+/** Snitch: force a target to reveal their highest or lowest card. */
+export async function performSnitch(
+    channelId: string, playerId: string,
+    targetId: string, type: 'High' | 'Low'
+): Promise<boolean> {
     const state = await getDropState(channelId);
     if (!state || state.turnOrder[state.currentTurnIndex] !== playerId) return false;
 
     const target = state.players[targetId];
     if (!target || target.isDead || target.hasFolded) return false;
 
-    let targetCard = target.hand[0];
+    let chosen = target.hand[0];
     for (const card of target.hand) {
-        if (type === 'High' && card.value > targetCard.value) targetCard = card;
-        if (type === 'Low' && card.value < targetCard.value) targetCard = card;
+        if (type === 'High' && card.value > chosen.value) chosen = card;
+        if (type === 'Low'  && card.value < chosen.value) chosen = card;
     }
+    chosen.isRevealed = true;
 
-    targetCard.isRevealed = true;
+    const judge = advanceTurn(state);
+    if (judge) evaluateJudgementSync(state);
 
-    advanceTurn(state);
     await saveDropState(channelId, state);
     return true;
 }
 
 /**
- * ACTION: Sabotage
- * Drop a target's chosen card (left/mid/right) to fallen pile. They draw from discard.
+ * Sabotage: drop one of the target's cards to the Fallen pile, target draws from
+ * top of Discard, and you must reveal one of your own cards.
  */
-export async function performSabotage(channelId: string, playerId: string, targetId: string, cardIndex: number, revealIndex: number): Promise<boolean> {
+export async function performSabotage(
+    channelId: string, playerId: string,
+    targetId: string, cardIndex: number, revealIndex: number
+): Promise<boolean> {
     const state = await getDropState(channelId);
     if (!state || state.turnOrder[state.currentTurnIndex] !== playerId) return false;
 
     const target = state.players[targetId];
-    const player = state.players[playerId];
+    const actor  = state.players[playerId];
 
-    // Drop target's card to fallen pile
-    const droppedCard = target.hand.splice(cardIndex, 1)[0];
-    state.fallenPile.push(droppedCard);
+    if (!target || target.isDead || target.hasFolded) return false;
+    if (cardIndex  < 0 || cardIndex  >= target.hand.length) return false;
+    if (revealIndex < 0 || revealIndex >= actor.hand.length)  return false;
+    if (state.discardPile.length === 0) return false;
 
-    // Target draws from discard
+    // Drop target's chosen card to fallen pile
+    const [dropped] = target.hand.splice(cardIndex, 1);
+    state.fallenPile.push(dropped);
+
+    // Target draws top of discard
     target.hand.push(state.discardPile.pop()!);
 
     // Reveal one of your own cards
-    player.hand[revealIndex].isRevealed = true;
+    actor.hand[revealIndex].isRevealed = true;
 
-    advanceTurn(state);
+    const judge = advanceTurn(state);
+    if (judge) evaluateJudgementSync(state);
+
     await saveDropState(channelId, state);
     return true;
 }
 
-/**
- * ACTION: Smuggle (Initiate)
- * Drops a card face down, claims a rank, pauses state for challenges.
- */
-export async function performSmuggle(channelId: string, playerId: string, cardId: string, declaredRank: CardRank): Promise<boolean> {
+/** Smuggle (initiate): drop a card face-down, declare a rank, wait for challenges. */
+export async function performSmuggle(
+    channelId: string, playerId: string,
+    cardId: string, declaredRank: CardRank
+): Promise<boolean> {
     const state = await getDropState(channelId);
     if (!state || state.turnOrder[state.currentTurnIndex] !== playerId) return false;
 
-    const player = state.players[playerId];
+    const player    = state.players[playerId];
     const cardIndex = player.hand.findIndex(c => c.id === cardId);
+    if (cardIndex === -1) return false;
+    if (state.drawPile.length === 0) return false;
+
     const actualCard = player.hand.splice(cardIndex, 1)[0];
-    const drawnCard = state.drawPile.shift()!;
+    const drawnCard  = state.drawPile.shift()!;
 
     state.pendingSmuggle = {
         smugglerId: playerId,
@@ -213,34 +332,29 @@ export async function performSmuggle(channelId: string, playerId: string, cardId
     return true;
 }
 
-/**
- * SMUGGLE LISTENER: Pass Challenge
- */
+/** Smuggle response: pass (no challenge). */
 export async function passSmuggle(channelId: string, playerId: string): Promise<void> {
     const state = await getDropState(channelId);
-    if (!state || !state.pendingSmuggle) return;
+    if (!state?.pendingSmuggle) return;
 
-    if (!state.pendingSmuggle.playersPassed.includes(playerId)) {
-        state.pendingSmuggle.playersPassed.push(playerId);
+    const smuggle = state.pendingSmuggle;
+    if (!smuggle.playersPassed.includes(playerId)) {
+        smuggle.playersPassed.push(playerId);
     }
 
-    // If all other active players passed, smuggle succeeds
-    const activePlayers = state.turnOrder.filter(id => id !== state.pendingSmuggle!.smugglerId && !state.players[id].isDead && !state.players[id].hasFolded);
-    if (state.pendingSmuggle.playersPassed.length >= activePlayers.length) {
-        state.pendingSmuggle.status = 'ResolvingDecree';
+    const others = getActivePlayers(state).filter(id => id !== smuggle.smugglerId);
+    if (smuggle.playersPassed.length >= others.length) {
+        smuggle.status = 'ResolvingDecree';
         await resolveSmuggle(state);
-        await saveDropState(channelId, state);
-    } else {
-        await saveDropState(channelId, state);
     }
+
+    await saveDropState(channelId, state);
 }
 
-/**
- * SMUGGLE LISTENER: Challenge
- */
+/** Smuggle response: challenge (call the bluff). */
 export async function challengeSmuggle(channelId: string, challengerId: string): Promise<void> {
     const state = await getDropState(channelId);
-    if (!state || !state.pendingSmuggle) return;
+    if (!state?.pendingSmuggle) return;
 
     state.pendingSmuggle.playersChallenged.push(challengerId);
     state.pendingSmuggle.status = 'ResolvingChallenge';
@@ -249,105 +363,52 @@ export async function challengeSmuggle(channelId: string, challengerId: string):
     await saveDropState(channelId, state);
 }
 
-/**
- * Evaluates truth/lie of Smuggle and applies consequences/decrees[cite: 1, 62, 63, 64].
- */
 async function resolveSmuggle(state: DropGameState, challengerId?: string) {
     const smuggle = state.pendingSmuggle!;
     const smuggler = state.players[smuggle.smugglerId];
 
+    // Smuggler keeps the drawn card regardless
     smuggler.hand.push(smuggle.drawnCard);
 
     if (challengerId) {
-        // Challenged [cite: 60]
-        const accuser = state.players[challengerId];
+        const accuser   = state.players[challengerId];
         const toldTruth = smuggle.actualCard.rank === smuggle.declaredRank;
 
-        state.discardPile.push(smuggle.actualCard); // Revealed to table [cite: 61]
+        // Reveal actual card to table
+        state.discardPile.push({ ...smuggle.actualCard, isRevealed: true });
 
         const loser = toldTruth ? accuser : smuggler;
 
-        // Apply Consequence based on ACTUAL dropped card's rank [cite: 64, 66]
         switch (smuggle.actualCard.rank) {
             case 'Baron':
-                loser.antePaid += state.pot; // Loser matches pot [cite: 66]
-                state.pot += state.pot;
+                loser.antePaid += state.pot;
+                state.pot      *= 2;
                 break;
             case 'Warden':
-                loser.hand = loser.hand.filter(c => c.rank !== 'Baron'); // Discard barons [cite: 66]
-                // Needs redraw logic in full implementation
+                loser.hand = loser.hand.filter(c => c.rank !== 'Baron');
+                break;
+            case 'Citizen': {
+                // Loser pays ante directly to winner of challenge
+                const winner = toldTruth ? smuggler : accuser;
+                winner.antePaid += loser.antePaid;
+                break;
+            }
+            case 'Glow Worm':
+                // Loser cannot become the Baron for this hand
+                loser.isDead = true; // simplified: eliminates them
                 break;
             case 'Hollow':
-                loser.isDead = true; // Loser immediately dead [cite: 66]
+                loser.isDead = true;
                 break;
-            // Citizen & Glow Worm consequences omitted for brevity, but map to state similarly
         }
     } else {
-        // Successful Lie / Passed
+        // No challenge — smuggle succeeds, card goes to Fallen pile face-down
         state.fallenPile.push(smuggle.actualCard);
-
-        // Trigger Decree based on DECLARED rank [cite: 58, 59, 66]
-        // Example: state.decreePending = true; (Would pause state again for Smuggler to select targets)
+        // Decree effects would be applied here based on declaredRank
     }
 
     state.pendingSmuggle = undefined;
-    advanceTurn(state);
-}
 
-/**
- * PHASE 5: JUDGEMENT
- * Evaluates hands, handles Opposing Barons Clause, finds Baron/Survivor, awards pot.
- */
-export async function evaluateJudgement(channelId: string): Promise<void> {
-    const state = await getDropState(channelId);
-    if (!state) return;
-
-    state.phase = 'Judgement';
-
-    let activePlayers = state.turnOrder
-        .map(id => state.players[id])
-        .filter(p => !p.isDead && !p.hasFolded);
-
-    // Evaluate Opposing Barons Clause [cite: 83]
-    for (const player of activePlayers) {
-        const baronNames = new Set(player.hand.filter(c => c.rank === 'Baron').map(c => c.name));
-        if (baronNames.size >= 2) { // 2 or more Baron Cards of different types cancel out [cite: 84]
-            player.isDead = true; // Evaluated as dead [cite: 85]
-        }
-    }
-
-    activePlayers = activePlayers.filter(p => !p.isDead);
-
-    // Calculate Scores
-    const scores = activePlayers.map(player => {
-        const score = player.hand.reduce((total, card) => total + card.value, 0);
-        return { id: player.id, score, antePaid: player.antePaid };
-    });
-
-    if (scores.length === 0) return;
-
-    const highestScore = Math.max(...scores.map(s => s.score));
-    const lowestScore = Math.min(...scores.map(s => s.score));
-
-    const barons = scores.filter(s => s.score === highestScore);
-    const survivors = scores.filter(s => s.score === lowestScore && highestScore !== lowestScore);
-
-    // Award Pot
-    if (barons.length > 0) {
-        // const splitPot = Math.floor(state.pot / barons.length);
-
-        // Note: In a fully persistent game, you would add `splitPot` to each Baron's global coin wallet here using Flashcore.
-        // For now, we just empty the pot to conclude the hand.
-        state.pot = 0;
-    }
-
-    // Survivors take back ante [cite: 12]
-    if (survivors.length > 0) {
-        for (const surv of survivors) {
-            // Give surv.antePaid back to surv
-            state.pot -= surv.antePaid;
-        }
-    }
-
-    await saveDropState(channelId, state);
+    const judge = advanceTurn(state);
+    if (judge) evaluateJudgementSync(state);
 }

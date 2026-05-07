@@ -17,31 +17,25 @@ export async function initializeGame(channelId: string): Promise<DropGameState> 
         pot: 0,
         currentAnteToCall: 0,
 
-        // Turn Management
         turnOrder: [],
         currentTurnIndex: 0,
         handLeaderIndex: 0,
         climbRoundCount: 0,
+        turnsInCurrentRound: 0,   // NEW: tracks when a full round completes
 
-        // Player Data Map
         players: {},
 
-        // Piles
         drawPile: freshDeck,
         discardPile: [],
         fallenPile: [],
 
-        // Game Flow
         phase: 'Setup'
     };
 
-    // Save the initial state to Robo's state tree, isolated to this channel
-    await setState(STATE_KEY, initialState, {
-        namespace: channelId
-    });
-
+    await setState(STATE_KEY, initialState, { namespace: channelId });
     return initialState;
 }
+
 
 /**
  * Retrieves the current game state for a specific channel.
@@ -49,12 +43,10 @@ export async function initializeGame(channelId: string): Promise<DropGameState> 
  * @returns The current DropGameState, or null if no game exists in this channel
  */
 export async function getDropState(channelId: string): Promise<DropGameState | null> {
-    const state = await getState<DropGameState>(STATE_KEY, {
-        namespace: channelId
-    });
-
+    const state = await getState<DropGameState>(STATE_KEY, { namespace: channelId });
     return state ?? null;
 }
+
 
 /**
  * Saves an updated game state back to the channel's namespace.
@@ -62,10 +54,9 @@ export async function getDropState(channelId: string): Promise<DropGameState | n
  * @param newState The modified DropGameState to save
  */
 export async function saveDropState(channelId: string, newState: DropGameState): Promise<void> {
-    await setState(STATE_KEY, newState, {
-        namespace: channelId
-    });
+    await setState(STATE_KEY, newState, { namespace: channelId });
 }
+
 
 /**
  * Adds a player to the current game setup.
@@ -74,12 +65,10 @@ export async function saveDropState(channelId: string, newState: DropGameState):
  */
 export async function joinGame(channelId: string, userId: string): Promise<boolean> {
     const state = await getDropState(channelId);
-
     if (!state) return false;
-    if (state.phase !== 'Setup') return false; // Players can only join during setup
-    if (state.turnOrder.includes(userId)) return true; // Already joined
+    if (state.phase !== 'Setup') return false;
+    if (state.turnOrder.includes(userId)) return true;
 
-    // Add player to the turn order and initialize their player state
     state.turnOrder.push(userId);
     state.players[userId] = {
         id: userId,

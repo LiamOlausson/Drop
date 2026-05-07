@@ -78,10 +78,11 @@ export interface DropGameState {
     currentAnteToCall: number; // The current highest bet that players must match to stay in
 
     // Turn Management
-    turnOrder: string[]; // Array of Discord User IDs
+    turnOrder: string[];
     currentTurnIndex: number;
-    handLeaderIndex: number; // Rotates clockwise after each hand
-    climbRoundCount: number; // Tracks the 2 rounds of The Climb
+    handLeaderIndex: number;
+    climbRoundCount: number;       // How many full rounds have completed in the current phase
+    turnsInCurrentRound: number;   // Turns taken since last round boundary — drives phase transitions
 
     // Player Data Map
     players: Record<string, PlayerState>;
@@ -93,5 +94,6 @@ export interface DropGameState {
 
     // Game Flow
     phase: TurnPhase;
-    pendingSmuggle?: SmuggleChallengeState; // Only populated when a Smuggle action is active
+    pendingSmuggle?: SmuggleChallengeState;
+
 }

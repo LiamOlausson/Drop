@@ -6,6 +6,10 @@ import { defineConfig } from 'vite'
 export default defineConfig({
 	plugins: [react(), DiscordProxy.Vite()],
 	server: {
-		allowedHosts: true
+		allowedHosts: true,
+        hmr: {
+            protocol: 'wss',
+            clientPort: 443
+        }
 	}
 })
