@@ -165,8 +165,8 @@ export async function performScavenge(
     state.discardPile.push(discarded);
 
     let drawn;
-    if (source === 'discard')       drawn = state.discardPile.pop()!;
-    else                           drawn = state.fallenPile.pop()!;
+    if (source === 'discard') drawn = state.discardPile.pop()!;
+    else drawn = state.fallenPile.pop()!;
 
     drawn.isRevealed = false;
     player.hand.push(drawn);
@@ -234,8 +234,52 @@ export async function performAscend(
     player.antePaid += raiseAmount;
     state.pot       += raiseAmount;
 
-    const judge = advanceTurn(state);
-    if (judge) evaluateJudgementSync(state);
+    // Pause the game state to force all other players to respond
+    state.pendingAscend = {
+        initiatorId: playerId,
+        playersResponded: [playerId] // The initiator automatically counts as responded
+    };
+
+    // The turn advances after the betting round concludes.
+    await saveDropState(channelId, state);
+    return true;
+}
+
+/**
+ * Handles a player's reaction to an Ascend action (Call or Fold).
+ */
+export async function respondToAscend(
+    channelId: string, playerId: string, response: 'Call' | 'Fold'
+): Promise<boolean> {
+    const state = await getDropState(channelId);
+    if (!state || !state.pendingAscend) return false;
+
+    const player = state.players[playerId];
+    if (player.isDead || player.hasFolded) return false;
+    if (state.pendingAscend.playersResponded.includes(playerId)) return false;
+
+    if (response === 'Call') {
+        // Player pays the exact difference needed to match the current ante
+        const amountToCall = state.currentAnteToCall - player.antePaid;
+        player.antePaid += amountToCall;
+        state.pot += amountToCall;
+    } else if (response === 'Fold') {
+        player.hasFolded = true;
+    }
+
+    // Mark this player as responded
+    state.pendingAscend.playersResponded.push(playerId);
+
+    // Check if all active players have responded
+    const activePlayers = state.turnOrder.filter(id => !state.players[id].isDead && !state.players[id].hasFolded);
+    const allResponded = activePlayers.every(id => state.pendingAscend!.playersResponded.includes(id));
+
+    if (allResponded) {
+        // The betting round is over. Clear the pending state and advance to the next player's actual turn.
+        state.pendingAscend = undefined;
+        const judge = advanceTurn(state);
+        if (judge) evaluateJudgementSync(state);
+    }
 
     await saveDropState(channelId, state);
     return true;
@@ -268,7 +312,7 @@ export async function performSnitch(
 
 /**
  * Sabotage: drop one of the target's cards to the Fallen pile, target draws from
- * top of Discard, and you must reveal one of your own cards.
+ * top of Discard (fallback to Fallen, then Draw), and you must reveal one of your own cards.
  */
 export async function performSabotage(
     channelId: string, playerId: string,
@@ -283,16 +327,28 @@ export async function performSabotage(
     if (!target || target.isDead || target.hasFolded) return false;
     if (cardIndex  < 0 || cardIndex  >= target.hand.length) return false;
     if (revealIndex < 0 || revealIndex >= actor.hand.length)  return false;
-    if (state.discardPile.length === 0) return false;
 
-    // Drop target's chosen card to fallen pile
+    // 1. Determine which card the target will draw FIRST
+    // This prevents them from drawing the exact card we are about to drop into the fallen pile.
+    let drawnCard;
+    if (state.discardPile.length > 0) {
+        drawnCard = state.discardPile.pop()!;
+    } else if (state.fallenPile.length > 0) {
+        drawnCard = state.fallenPile.pop()!;
+    } else if (state.drawPile.length > 0) {
+        drawnCard = state.drawPile.shift()!; // Note: drawPile uses shift() to take from the top of the deck
+    } else {
+        return false; // Extreme edge case: all 3 piles are completely empty
+    }
+
+    // 2. Drop target's chosen card to the fallen pile
     const [dropped] = target.hand.splice(cardIndex, 1);
     state.fallenPile.push(dropped);
 
-    // Target draws top of discard
-    target.hand.push(state.discardPile.pop()!);
+    // 3. Target draws the determined card
+    target.hand.push(drawnCard);
 
-    // Reveal one of your own cards
+    // 4. Reveal one of your own cards
     actor.hand[revealIndex].isRevealed = true;
 
     const judge = advanceTurn(state);

@@ -70,6 +70,17 @@ export interface SmuggleChallengeState {
 }
 
 /**
+ * Pending State for Ascend Action
+ * Because Ascending requires input from other players (Call/Fold),
+ * the game state must pause and track this temporary interaction.
+ */
+export interface AscendChallengeState {
+    initiatorId: string;
+    playersResponded: string[]; // Tracks who has already called or folded
+}
+
+
+/**
  * Master Game State
  * The root object synced across all clients via Robo.js Sync / Flashcore.
  */
@@ -95,5 +106,5 @@ export interface DropGameState {
     // Game Flow
     phase: TurnPhase;
     pendingSmuggle?: SmuggleChallengeState;
-
+    pendingAscend?: AscendChallengeState;
 }

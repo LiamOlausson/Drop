@@ -5,7 +5,7 @@ import type { DropGameState, ActionType } from '../../game/types';
 interface ActionMenuProps {
     gameState: DropGameState;
     playerId: string;
-    onAction: (action: ActionType | 'PassSmuggle' | 'ChallengeSmuggle', payload?: any) => void;
+    onAction: (action: ActionType | 'PassSmuggle' | 'ChallengeSmuggle' | 'RespondAscend', payload?: any) => void;
 }
 
 export const ActionMenu: React.FC<ActionMenuProps> = ({ gameState, playerId, onAction }) => {
@@ -22,7 +22,7 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({ gameState, playerId, onA
     );
 
     // -----------------------------------------------------------------------
-    // 1. SMUGGLE CHALLENGE STATE
+    // 1. Blocking States (Smuggle, Ascend)
     // -----------------------------------------------------------------------
     if (gameState.pendingSmuggle?.status === 'WaitingForResponses') {
         const smuggle = gameState.pendingSmuggle;
@@ -46,6 +46,42 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({ gameState, playerId, onA
                     </ActionButton>
                     <ActionButton color="#4caf50" onClick={() => onAction('PassSmuggle')}>
                         Pass
+                    </ActionButton>
+                </div>
+            </MenuBox>
+        );
+    }
+
+    if (gameState.pendingAscend) {
+        const ascend = gameState.pendingAscend;
+        const hasResponded = ascend.playersResponded.includes(playerId);
+        const isInitiator = ascend.initiatorId === playerId;
+
+        // Calculate exactly how much this specific player needs to pay to match the pot
+        const amountToCall = gameState.currentAnteToCall - player.antePaid;
+
+        if (isInitiator) {
+            return <MenuBox>Waiting for table to Call or Fold...</MenuBox>;
+        }
+
+        if (player.isDead || player.hasFolded) {
+            return <MenuBox>Waiting for table... (You are out)</MenuBox>;
+        }
+
+        if (hasResponded) {
+            return <MenuBox>You have responded. Waiting for others...</MenuBox>;
+        }
+
+        return (
+            <MenuBox title="Stakes Raised!">
+                <p>Player <strong>{ascend.initiatorId}</strong> has Ascended.</p>
+                <p>You must pay <strong>{amountToCall}</strong> coins to Call, or go to the bridge (Fold).</p>
+                <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+                    <ActionButton color="#4caf50" onClick={() => onAction('RespondAscend', { response: 'Call' })}>
+                        Call (-{amountToCall})
+                    </ActionButton>
+                    <ActionButton color="#d32f2f" onClick={() => onAction('RespondAscend', { response: 'Fold' })}>
+                        Fold (Bridge)
                     </ActionButton>
                 </div>
             </MenuBox>

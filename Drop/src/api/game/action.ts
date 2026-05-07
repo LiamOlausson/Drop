@@ -5,7 +5,7 @@ import { initializeGame, joinGame } from '../../game/state.js';
 import {
     startHand, performScavenge, performDive, performAscend,
     performSnitch, performSabotage, performSmuggle,
-    passSmuggle, challengeSmuggle
+    passSmuggle, challengeSmuggle, respondToAscend
 } from '../../game/actions.js';
 
 export default async (req: RoboRequest) => {
@@ -44,6 +44,9 @@ export default async (req: RoboRequest) => {
                 break;
             case 'Ascend':
                 success = await performAscend(channelId, userId, payload?.raiseAmount || 5);
+                break;
+            case 'RespondAscend':
+                success = await respondToAscend(channelId, userId, payload.response);
                 break;
             case 'Snitch':
                 success = await performSnitch(channelId, userId, payload.targetId, payload.type);

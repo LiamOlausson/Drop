@@ -39,7 +39,7 @@ export function useGameState() {
 
     // Dispatch an action to the backend API
     const executeAction = useCallback(async (
-        action: ActionType | 'PassSmuggle' | 'ChallengeSmuggle' | 'Initialize' | 'Join' | 'StartHand',
+        action: ActionType | 'PassSmuggle' | 'ChallengeSmuggle' | 'RespondAscend' | 'Initialize' | 'Join' | 'StartHand',
         payload?: any
     ) => {
         if (!channelId || !userId) return;
