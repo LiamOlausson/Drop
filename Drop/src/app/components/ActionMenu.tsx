@@ -8,434 +8,504 @@ interface ActionMenuProps {
     onAction: (action: ActionType | 'PassSmuggle' | 'ChallengeSmuggle' | 'RespondAscend', payload?: any) => void;
 }
 
+type SubAction = ActionType | null;
+
+/* ── Action Definitions ── */
+const ACTIONS: Array<{ id: ActionType; label: string; icon: string; desc: string; color: string }> = [
+    { id: 'Scavenge', label: 'Scavenge', icon: '⚒',  desc: 'Swap a card from your hand with the Discard or Fallen pile.',  color: '#6a8c4a' },
+    { id: 'Dive',     label: 'Dive',     icon: '⬇',  desc: 'Discard 2 cards, pay ante, draw 2 from the deck.',            color: '#4a6a8c' },
+    { id: 'Ascend',   label: 'Ascend',   icon: '⬆',  desc: 'Raise the stakes. Others must call or fold.',                  color: '#8c4a4a' },
+    { id: 'Snitch',   label: 'Snitch',   icon: '👁',  desc: 'Force a target to reveal their highest or lowest card.',       color: '#7a6a2a' },
+    { id: 'Smuggle',  label: 'Smuggle',  icon: '🃏',  desc: 'Drop a card face-down into the Fallen pile, claiming its rank.',color: '#6a4a8c' },
+    { id: 'Sabotage', label: 'Sabotage', icon: '⚡',  desc: 'Choose an opponent\'s card to cast into the Fallen pile.',      color: '#8c6a2a' },
+];
+
 export const ActionMenu: React.FC<ActionMenuProps> = ({ gameState, playerId, onAction }) => {
-    const [selectedAction, setSelectedAction] = useState<ActionType | null>(null);
-    const [targetId, setTargetId] = useState<string>('');
+    const [selectedAction, setSelectedAction] = useState<SubAction>(null);
+    const [targetId, setTargetId]             = useState<string>('');
     const [selectedCardId, setSelectedCardId] = useState<string>('');
-    // For Dive: track the two chosen card IDs
-    const [diveCardIds, setDiveCardIds] = useState<string[]>([]);
+    const [diveCardIds, setDiveCardIds]       = useState<string[]>([]);
+    const [raiseAmount, setRaiseAmount]       = useState<number>(5);
 
     const isMyTurn = gameState.turnOrder[gameState.currentTurnIndex] === playerId;
     const player   = gameState.players[playerId];
     const opponents = gameState.turnOrder.filter(
-        id => id !== playerId && !gameState.players[id].isDead
+        id => id !== playerId && !gameState.players[id].isDead && !gameState.players[id].hasFolded
     );
 
-    // -----------------------------------------------------------------------
-    // 1. Blocking States (Smuggle, Ascend)
-    // -----------------------------------------------------------------------
-    if (gameState.pendingSmuggle?.status === 'WaitingForResponses') {
-        const smuggle = gameState.pendingSmuggle;
-        const isSmuggler   = smuggle.smugglerId === playerId;
-        const hasResponded =
-            smuggle.playersPassed.includes(playerId) ||
-            smuggle.playersChallenged.includes(playerId);
+    const back = () => {
+        setSelectedAction(null);
+        setSelectedCardId('');
+        setTargetId('');
+        setDiveCardIds([]);
+        setRaiseAmount(5);
+    };
 
-        if (isSmuggler)    return <MenuBox>Waiting for table to challenge your Smuggle…</MenuBox>;
-        if (hasResponded)  return <MenuBox>You have responded. Waiting for others…</MenuBox>;
+    /* ── Smuggle challenge overlay ── */
+    if (gameState.pendingSmuggle?.status === 'WaitingForResponses') {
+        const sm = gameState.pendingSmuggle;
+        const isSmuggler  = sm.smugglerId === playerId;
+        const hasResponded = sm.playersPassed.includes(playerId) || sm.playersChallenged.includes(playerId);
+
+        if (isSmuggler) return <Scroll><WaitMsg icon="🃏">Waiting for the table to respond to your Smuggle…</WaitMsg></Scroll>;
+        if (hasResponded) return <Scroll><WaitMsg icon="⏳">You've responded. Waiting for others…</WaitMsg></Scroll>;
 
         return (
-            <MenuBox title="Smuggle Detected!">
-                <p>
-                    <strong>{smuggle.smugglerId}</strong> smuggled a card claiming it is a{' '}
-                    <strong>{smuggle.declaredRank}</strong>.
+            <Scroll title="⚠ A Smuggle Has Occurred">
+                <p style={descStyle}>
+                    <strong style={{ color: '#f0c040' }}>{sm.smugglerId.substring(0, 10)}…</strong>{' '}
+                    has dropped a card claiming it is a{' '}
+                    <strong style={{ color: '#c0932b' }}>{sm.declaredRank}</strong>.
+                    Do you believe them?
                 </p>
-                <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
-                    <ActionButton color="#d32f2f" onClick={() => onAction('ChallengeSmuggle')}>
-                        Challenge (Call Bluff)
-                    </ActionButton>
-                    <ActionButton color="#4caf50" onClick={() => onAction('PassSmuggle')}>
-                        Pass
-                    </ActionButton>
+                <div style={rowStyle}>
+                    <TavernBtn color="blood" onClick={() => onAction('ChallengeSmuggle')}>
+                        ⚔ Challenge — Call the Bluff
+                    </TavernBtn>
+                    <TavernBtn color="mold" onClick={() => onAction('PassSmuggle')}>
+                        ✓ Pass — Trust Them
+                    </TavernBtn>
                 </div>
-            </MenuBox>
+            </Scroll>
         );
     }
 
+    /* ── Ascend response overlay ── */
     if (gameState.pendingAscend) {
-        const ascend = gameState.pendingAscend;
-        const hasResponded = ascend.playersResponded.includes(playerId);
-        const isInitiator = ascend.initiatorId === playerId;
-
-        // Calculate exactly how much this specific player needs to pay to match the pot
+        const asc = gameState.pendingAscend;
+        const hasResponded = asc.playersResponded.includes(playerId);
+        const isInitiator  = asc.initiatorId === playerId;
         const amountToCall = gameState.currentAnteToCall - player.antePaid;
 
-        if (isInitiator) {
-            return <MenuBox>Waiting for table to Call or Fold...</MenuBox>;
-        }
-
-        if (player.isDead || player.hasFolded) {
-            return <MenuBox>Waiting for table... (You are out)</MenuBox>;
-        }
-
-        if (hasResponded) {
-            return <MenuBox>You have responded. Waiting for others...</MenuBox>;
-        }
+        if (isInitiator)  return <Scroll><WaitMsg icon="⬆">Waiting for the table to respond to your Ascend…</WaitMsg></Scroll>;
+        if (player.isDead || player.hasFolded) return <Scroll><WaitMsg icon="⚑">Waiting for the table… (you're out)</WaitMsg></Scroll>;
+        if (hasResponded) return <Scroll><WaitMsg icon="⏳">You've responded. Waiting for others…</WaitMsg></Scroll>;
 
         return (
-            <MenuBox title="Stakes Raised!">
-                <p>Player <strong>{ascend.initiatorId}</strong> has Ascended.</p>
-                <p>You must pay <strong>{amountToCall}</strong> coins to Call, or go to the bridge (Fold).</p>
-                <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
-                    <ActionButton color="#4caf50" onClick={() => onAction('RespondAscend', { response: 'Call' })}>
-                        Call (-{amountToCall})
-                    </ActionButton>
-                    <ActionButton color="#d32f2f" onClick={() => onAction('RespondAscend', { response: 'Fold' })}>
-                        Fold (Bridge)
-                    </ActionButton>
+            <Scroll title="⬆ The Stakes Rise">
+                <p style={descStyle}>
+                    <strong style={{ color: '#f0c040' }}>{asc.initiatorId.substring(0, 10)}…</strong>{' '}
+                    has Ascended. Pay{' '}
+                    <strong style={{ color: '#c0932b' }}>{amountToCall} 🪙</strong> to remain in the hand,
+                    or go to the Bridge.
+                </p>
+                <div style={rowStyle}>
+                    <TavernBtn color="mold" onClick={() => onAction('RespondAscend', { response: 'Call' })}>
+                        ✓ Call — Pay {amountToCall} 🪙
+                    </TavernBtn>
+                    <TavernBtn color="blood" onClick={() => onAction('RespondAscend', { response: 'Fold' })}>
+                        ⚑ Fold — Go to the Bridge
+                    </TavernBtn>
                 </div>
-            </MenuBox>
+            </Scroll>
         );
     }
 
-    // -----------------------------------------------------------------------
-    // 2. NOT YOUR TURN
-    // -----------------------------------------------------------------------
+    /* ── Waiting / Phase gates ── */
     if (!isMyTurn || (gameState.phase !== 'The Climb' && gameState.phase !== 'Battle')) {
         if (gameState.phase === 'Setup' || gameState.phase === 'Feeding The Sump')
-            return <MenuBox>Waiting for hand to start…</MenuBox>;
+            return <Scroll><WaitMsg icon="🕯">The hand hasn't started yet…</WaitMsg></Scroll>;
         if (gameState.phase === 'Judgement')
-            return <MenuBox>Judgement Phase! Calculating scores…</MenuBox>;
+            return <Scroll><WaitMsg icon="⚖">The cards are judged. Scores being tallied…</WaitMsg></Scroll>;
 
-        const currentPlayerId = gameState.turnOrder[gameState.currentTurnIndex];
-        return <MenuBox>Waiting for <strong>{currentPlayerId}</strong> to move…</MenuBox>;
+        const acting = gameState.turnOrder[gameState.currentTurnIndex];
+        return (
+            <Scroll>
+                <WaitMsg icon="⏳">
+                    Waiting for <strong style={{ color: '#f0c040' }}>{acting?.substring(0, 10)}…</strong> to act…
+                </WaitMsg>
+            </Scroll>
+        );
     }
 
-    // -----------------------------------------------------------------------
-    // 3. BATTLE PHASE — Ascend only
-    // -----------------------------------------------------------------------
+    /* ── Battle phase ── */
     if (gameState.phase === 'Battle') {
         if (!selectedAction) {
             return (
-                <MenuBox title="⚔️ Battle Phase — Ascend or Pass">
-                    <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
-                        <ActionButton onClick={() => setSelectedAction('Ascend')}>Ascend (Raise)</ActionButton>
-                        <ActionButton color="#555" onClick={() => {
-                            // Passing Battle turn — Ascend with 0 raise to advance turn
-                            onAction('Ascend', { raiseAmount: 0 });
-                        }}>Pass</ActionButton>
+                <Scroll title="⚔ Battle — Final Round">
+                    <p style={descStyle}>You may Ascend the stakes one final time, or pass to end the Battle.</p>
+                    <div style={rowStyle}>
+                        <TavernBtn color="candle" onClick={() => setSelectedAction('Ascend')}>⬆ Ascend</TavernBtn>
+                        <TavernBtn color="muted" onClick={() => onAction('Ascend', { raiseAmount: 0 })}>— Pass</TavernBtn>
                     </div>
-                </MenuBox>
+                </Scroll>
             );
         }
-        // Ascend sub-menu (same as Climb)
         return (
-            <MenuBox title="Ascend — Raise Amount">
-                <div style={subMenuStyle}>
-                    <input
-                        type="number"
-                        id="ascend-amount"
-                        defaultValue={5}
-                        min={0}
-                        style={inputStyle}
-                    />
-                    <ConfirmButton onClick={() => {
-                        const val = parseInt(
-                            (document.getElementById('ascend-amount') as HTMLInputElement).value, 10
-                        ) || 0;
-                        onAction('Ascend', { raiseAmount: val });
-                        setSelectedAction(null);
-                    }} />
-                    <BackButton onClick={() => setSelectedAction(null)} />
+            <Scroll title="⬆ Ascend — Raise Amount">
+                <AscendInput value={raiseAmount} onChange={setRaiseAmount} />
+                <div style={rowStyle}>
+                    <TavernBtn color="candle" onClick={() => { onAction('Ascend', { raiseAmount }); back(); }}>
+                        Confirm Ascend
+                    </TavernBtn>
+                    <BackLink onClick={back} />
                 </div>
-            </MenuBox>
+            </Scroll>
         );
     }
 
-    // -----------------------------------------------------------------------
-    // 4. THE CLIMB — action picker
-    // -----------------------------------------------------------------------
+    /* ── The Climb — action picker ── */
     if (!selectedAction) {
         return (
-            <MenuBox title="Your Turn — Choose an Action">
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', justifyContent: 'center' }}>
-                    <ActionButton onClick={() => setSelectedAction('Scavenge')}>Scavenge</ActionButton>
-                    <ActionButton onClick={() => { setDiveCardIds([]); setSelectedAction('Dive'); }}>Dive</ActionButton>
-                    <ActionButton onClick={() => setSelectedAction('Ascend')}>Ascend</ActionButton>
-                    <ActionButton onClick={() => setSelectedAction('Snitch')}>Snitch</ActionButton>
-                    <ActionButton onClick={() => setSelectedAction('Smuggle')}>Smuggle</ActionButton>
-                    <ActionButton onClick={() => setSelectedAction('Sabotage')}>Sabotage</ActionButton>
+            <Scroll title="Your Turn — Choose Your Action">
+                <div style={{
+                    display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8,
+                }}>
+                    {ACTIONS.map(a => (
+                        <ActionTile key={a.id} action={a} onClick={() => {
+                            if (a.id === 'Dive') setDiveCardIds([]);
+                            setSelectedAction(a.id);
+                        }} />
+                    ))}
                 </div>
-            </MenuBox>
+            </Scroll>
         );
     }
 
-    // -----------------------------------------------------------------------
-    // 5. SUB-MENUS
-    // -----------------------------------------------------------------------
+    /* ── Sub-menus ── */
     return (
-        <MenuBox title={`Action: ${selectedAction}`}>
+        <Scroll title={`${ACTIONS.find(a => a.id === selectedAction)?.icon} ${selectedAction}`}>
 
             {/* SCAVENGE */}
             {selectedAction === 'Scavenge' && (
-                <div style={subMenuStyle}>
-                    <label style={labelStyle}>Card to discard from hand:</label>
-                    <select onChange={e => setSelectedCardId(e.target.value)} defaultValue="">
-                        <option value="" disabled>Select card…</option>
-                        {player.hand.map(c => (
-                            <option key={c.id} value={c.id}>
-                                {c.name} ({c.rank}) — {c.value}pts
-                            </option>
-                        ))}
-                    </select>
-                    <label style={labelStyle}>Take from:</label>
-                    <select id="scavenge-source" defaultValue="discard">
-                        <option value="discard">Top of Discard Pile</option>
-                        <option value="fallen">Top of Fallen Pile</option>
-                    </select>
-                    <ConfirmButton onClick={() => {
-                        const source = (document.getElementById('scavenge-source') as HTMLSelectElement).value;
-                        onAction('Scavenge', { cardId: selectedCardId, source });
-                        setSelectedAction(null);
-                    }} />
+                <div style={formStyle}>
+                    <Field label="Card to discard from hand:">
+                        <select value={selectedCardId} onChange={e => setSelectedCardId(e.target.value)}>
+                            <option value="" disabled>Select a card…</option>
+                            {player.hand.map(c => (
+                                <option key={c.id} value={c.id}>
+                                    {c.name} ({c.rank}) — {c.value}pts{c.isRevealed ? ' [Revealed]' : ''}
+                                </option>
+                            ))}
+                        </select>
+                    </Field>
+                    <Field label="Take from:">
+                        <select id="scavenge-source" defaultValue="discard">
+                            <option value="discard">Top of Discard Pile</option>
+                            <option value="fallen">Top of Fallen Pile</option>
+                        </select>
+                    </Field>
+                    <div style={rowStyle}>
+                        <TavernBtn color="candle" disabled={!selectedCardId} onClick={() => {
+                            const src = (document.getElementById('scavenge-source') as HTMLSelectElement).value;
+                            onAction('Scavenge', { cardId: selectedCardId, source: src });
+                            back();
+                        }}>Confirm Scavenge</TavernBtn>
+                        <BackLink onClick={back} />
+                    </div>
                 </div>
             )}
 
             {/* DIVE */}
             {selectedAction === 'Dive' && (
-                <div style={subMenuStyle}>
-                    <label style={labelStyle}>
-                        Select exactly 2 cards to discard (chosen: {diveCardIds.length}/2):
-                    </label>
-                    {player.hand.map(c => {
-                        const checked = diveCardIds.includes(c.id);
-                        return (
-                            <label
-                                key={c.id}
-                                style={{
-                                    display: 'flex', alignItems: 'center', gap: '10px',
-                                    padding: '6px 12px', borderRadius: '6px', cursor: 'pointer',
-                                    backgroundColor: checked ? 'rgba(255,215,0,0.2)' : 'rgba(255,255,255,0.05)',
-                                    border: checked ? '1px solid #FFD700' : '1px solid #555',
-                                    color: '#FFF', width: '80%'
-                                }}
-                            >
-                                <input
-                                    type="checkbox"
-                                    checked={checked}
-                                    onChange={e => {
+                <div style={formStyle}>
+                    <p style={descStyle}>Select exactly 2 cards to discard. Costs 1 ante. Draws 2 cards (first revealed).</p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, width: '100%' }}>
+                        {player.hand.map(c => {
+                            const checked = diveCardIds.includes(c.id);
+                            return (
+                                <label key={c.id} style={{
+                                    display: 'flex', alignItems: 'center', gap: 10,
+                                    padding: '8px 14px', borderRadius: 6, cursor: 'pointer',
+                                    background: checked ? 'rgba(240,192,64,0.1)' : 'rgba(255,255,255,0.03)',
+                                    border: checked ? '1px solid rgba(240,192,64,0.4)' : '1px solid rgba(60,46,30,0.6)',
+                                    transition: 'all 0.15s ease',
+                                    color: '#c9ad87', fontFamily: 'Crimson Pro, serif',
+                                }}>
+                                    <input type="checkbox" checked={checked} style={{ accentColor: '#f0c040' }} onChange={e => {
                                         if (e.target.checked) {
-                                            if (diveCardIds.length < 2)
-                                                setDiveCardIds(prev => [...prev, c.id]);
+                                            if (diveCardIds.length < 2) setDiveCardIds(p => [...p, c.id]);
                                         } else {
-                                            setDiveCardIds(prev => prev.filter(id => id !== c.id));
+                                            setDiveCardIds(p => p.filter(id => id !== c.id));
                                         }
-                                    }}
-                                />
-                                {c.name} ({c.rank}) — {c.value}pts
-                                {c.isRevealed && (
-                                    <span style={{ fontSize: '11px', color: '#FFD700', marginLeft: 'auto' }}>
-                                        Revealed
-                                    </span>
-                                )}
-                            </label>
-                        );
-                    })}
-                    <p style={{ fontSize: '12px', color: '#aaa', margin: '4px 0' }}>
-                        Costs 1 extra ante. Draws 2 cards — first is revealed.
-                    </p>
-                    <ConfirmButton
-                        disabled={diveCardIds.length !== 2}
-                        onClick={() => {
-                            onAction('Dive', { discardIds: diveCardIds });
-                            setSelectedAction(null);
-                            setDiveCardIds([]);
-                        }}
-                    />
+                                    }} />
+                                    <span>{c.name} ({c.rank}) — {c.value}pts</span>
+                                    {c.isRevealed && <span style={{ marginLeft: 'auto', fontSize: 11, color: '#c0932b', fontStyle: 'italic' }}>revealed</span>}
+                                </label>
+                            );
+                        })}
+                    </div>
+                    <div style={rowStyle}>
+                        <TavernBtn color="candle" disabled={diveCardIds.length !== 2} onClick={() => {
+                            onAction('Dive', { discardIds: diveCardIds }); back();
+                        }}>Confirm Dive ({diveCardIds.length}/2)</TavernBtn>
+                        <BackLink onClick={back} />
+                    </div>
                 </div>
             )}
 
             {/* ASCEND */}
             {selectedAction === 'Ascend' && (
-                <div style={subMenuStyle}>
-                    <label style={labelStyle}>Raise Amount:</label>
-                    <input
-                        type="number"
-                        id="ascend-amount"
-                        defaultValue={5}
-                        min={1}
-                        style={inputStyle}
-                    />
-                    <ConfirmButton onClick={() => {
-                        const val = parseInt(
-                            (document.getElementById('ascend-amount') as HTMLInputElement).value, 10
-                        ) || 0;
-                        onAction('Ascend', { raiseAmount: val });
-                        setSelectedAction(null);
-                    }} />
+                <div style={formStyle}>
+                    <p style={descStyle}>Raise the stakes. All other players must call or fold.</p>
+                    <AscendInput value={raiseAmount} onChange={setRaiseAmount} />
+                    <div style={rowStyle}>
+                        <TavernBtn color="blood" onClick={() => { onAction('Ascend', { raiseAmount }); back(); }}>
+                            ⬆ Ascend +{raiseAmount} 🪙
+                        </TavernBtn>
+                        <BackLink onClick={back} />
+                    </div>
                 </div>
             )}
 
             {/* SNITCH */}
             {selectedAction === 'Snitch' && (
-                <div style={subMenuStyle}>
-                    <label style={labelStyle}>Target player:</label>
-                    <select onChange={e => setTargetId(e.target.value)} defaultValue="">
-                        <option value="" disabled>Select target…</option>
-                        {opponents.map(id => (
-                            <option key={id} value={id}>{id}</option>
-                        ))}
-                    </select>
-                    <label style={labelStyle}>Force them to reveal:</label>
-                    <select id="snitch-type" defaultValue="High">
-                        <option value="High">Highest card</option>
-                        <option value="Low">Lowest card</option>
-                    </select>
-                    <ConfirmButton onClick={() => {
-                        const type = (document.getElementById('snitch-type') as HTMLSelectElement).value;
-                        onAction('Snitch', { targetId, type });
-                        setSelectedAction(null);
-                    }} />
+                <div style={formStyle}>
+                    <p style={descStyle}>Point a finger — force a player to reveal a card.</p>
+                    <Field label="Target player:">
+                        <select value={targetId} onChange={e => setTargetId(e.target.value)}>
+                            <option value="" disabled>Select target…</option>
+                            {opponents.map(id => (
+                                <option key={id} value={id}>{id.substring(0, 14)}</option>
+                            ))}
+                        </select>
+                    </Field>
+                    <Field label="Reveal their:">
+                        <select id="snitch-type" defaultValue="High">
+                            <option value="High">Highest card</option>
+                            <option value="Low">Lowest card</option>
+                        </select>
+                    </Field>
+                    <div style={rowStyle}>
+                        <TavernBtn color="rust" disabled={!targetId} onClick={() => {
+                            const type = (document.getElementById('snitch-type') as HTMLSelectElement).value;
+                            onAction('Snitch', { targetId, type }); back();
+                        }}>👁 Snitch</TavernBtn>
+                        <BackLink onClick={back} />
+                    </div>
                 </div>
             )}
 
             {/* SMUGGLE */}
             {selectedAction === 'Smuggle' && (
-                <div style={subMenuStyle}>
-                    <label style={labelStyle}>Card to drop face-down:</label>
-                    <select onChange={e => setSelectedCardId(e.target.value)} defaultValue="">
-                        <option value="" disabled>Select card…</option>
-                        {player.hand.map(c => (
-                            <option key={c.id} value={c.id}>
-                                {c.name} ({c.rank}) — {c.value}pts
-                            </option>
-                        ))}
-                    </select>
-                    <label style={labelStyle}>Declare rank as:</label>
-                    <select id="smuggle-rank" defaultValue="Baron">
-                        <option value="Baron">Baron</option>
-                        <option value="Warden">Warden</option>
-                        <option value="Citizen">Citizen</option>
-                        <option value="Glow Worm">Glow Worm</option>
-                        <option value="Hollow">Hollow</option>
-                    </select>
-                    <ConfirmButton onClick={() => {
-                        const rank = (document.getElementById('smuggle-rank') as HTMLSelectElement).value;
-                        onAction('Smuggle', { cardId: selectedCardId, declaredRank: rank });
-                        setSelectedAction(null);
-                    }} />
+                <div style={formStyle}>
+                    <p style={descStyle}>Drop a card face-down and declare its rank — truthfully or not.</p>
+                    <Field label="Card to smuggle:">
+                        <select value={selectedCardId} onChange={e => setSelectedCardId(e.target.value)}>
+                            <option value="" disabled>Select a card…</option>
+                            {player.hand.map(c => (
+                                <option key={c.id} value={c.id}>
+                                    {c.name} ({c.rank}) — {c.value}pts
+                                </option>
+                            ))}
+                        </select>
+                    </Field>
+                    <Field label="Declare rank as:">
+                        <select id="smuggle-rank" defaultValue="Baron">
+                            {['Baron', 'Warden', 'Citizen', 'Glow Worm', 'Hollow'].map(r => (
+                                <option key={r} value={r}>{r}</option>
+                            ))}
+                        </select>
+                    </Field>
+                    <div style={rowStyle}>
+                        <TavernBtn color="candle" disabled={!selectedCardId} onClick={() => {
+                            const rank = (document.getElementById('smuggle-rank') as HTMLSelectElement).value;
+                            onAction('Smuggle', { cardId: selectedCardId, declaredRank: rank }); back();
+                        }}>🃏 Smuggle</TavernBtn>
+                        <BackLink onClick={back} />
+                    </div>
                 </div>
             )}
 
             {/* SABOTAGE */}
             {selectedAction === 'Sabotage' && (
-                <div style={subMenuStyle}>
-                    <label style={labelStyle}>Target player:</label>
-                    <select onChange={e => setTargetId(e.target.value)} defaultValue="">
-                        <option value="" disabled>Select target…</option>
-                        {opponents.map(id => (
-                            <option key={id} value={id}>{id}</option>
-                        ))}
-                    </select>
-                    <label style={labelStyle}>Which of their cards to drop (position):</label>
-                    <select id="sabotage-card-index" defaultValue="0">
-                        <option value="0">Left / 1st card</option>
-                        <option value="1">Middle / 2nd card</option>
-                        <option value="2">Right / 3rd card</option>
-                    </select>
-                    <label style={labelStyle}>Which of your cards to reveal:</label>
-                    <select id="sabotage-reveal-index" defaultValue="0">
-                        {player.hand.map((c, i) => (
-                            <option key={c.id} value={i}>
-                                {i === 0 ? 'Left' : i === 1 ? 'Middle' : 'Right'} — {c.isRevealed ? '(already revealed)' : c.rank}
-                            </option>
-                        ))}
-                    </select>
-                    <p style={{ fontSize: '12px', color: '#aaa', margin: '4px 0' }}>
-                        Their dropped card goes to Fallen Pile. They draw from Discard.
-                    </p>
-                    <ConfirmButton onClick={() => {
-                        const cardIndex = parseInt(
-                            (document.getElementById('sabotage-card-index') as HTMLSelectElement).value
-                        );
-                        const revealIndex = parseInt(
-                            (document.getElementById('sabotage-reveal-index') as HTMLSelectElement).value
-                        );
-                        onAction('Sabotage', { targetId, cardIndex, revealIndex });
-                        setSelectedAction(null);
-                    }} />
+                <div style={formStyle}>
+                    <p style={descStyle}>Choose an opponent's card to cast into the Fallen pile. You must reveal one of your own.</p>
+                    <Field label="Target player:">
+                        <select value={targetId} onChange={e => setTargetId(e.target.value)}>
+                            <option value="" disabled>Select target…</option>
+                            {opponents.map(id => (
+                                <option key={id} value={id}>{id.substring(0, 14)}</option>
+                            ))}
+                        </select>
+                    </Field>
+                    <Field label="Their card position to drop:">
+                        <select id="sab-card" defaultValue="0">
+                            <option value="0">Left (1st)</option>
+                            <option value="1">Middle (2nd)</option>
+                            <option value="2">Right (3rd)</option>
+                        </select>
+                    </Field>
+                    <Field label="Your card to reveal:">
+                        <select id="sab-reveal" defaultValue="0">
+                            {player.hand.map((c, i) => (
+                                <option key={c.id} value={i}>
+                                    {['Left','Middle','Right'][i] ?? i} — {c.isRevealed ? '(already revealed)' : c.rank}
+                                </option>
+                            ))}
+                        </select>
+                    </Field>
+                    <div style={rowStyle}>
+                        <TavernBtn color="rust" disabled={!targetId} onClick={() => {
+                            const cardIndex   = parseInt((document.getElementById('sab-card') as HTMLSelectElement).value);
+                            const revealIndex = parseInt((document.getElementById('sab-reveal') as HTMLSelectElement).value);
+                            onAction('Sabotage', { targetId, cardIndex, revealIndex }); back();
+                        }}>⚡ Sabotage</TavernBtn>
+                        <BackLink onClick={back} />
+                    </div>
                 </div>
             )}
 
-            <BackButton onClick={() => setSelectedAction(null)} />
-        </MenuBox>
+        </Scroll>
     );
 };
 
-// ---------------------------------------------------------------------------
-// REUSABLE UI PRIMITIVES
-// ---------------------------------------------------------------------------
+/* ── Reusable Primitives ── */
 
-const MenuBox: React.FC<{ children: React.ReactNode; title?: string }> = ({ children, title }) => (
+const Scroll: React.FC<{ children: React.ReactNode; title?: string }> = ({ children, title }) => (
     <div style={{
-        backgroundColor: '#1e272e', border: '2px solid #333', borderRadius: '12px',
-        padding: '20px', width: '100%', maxWidth: '620px', margin: '20px auto',
-        color: '#FFF', boxShadow: '0 8px 16px rgba(0,0,0,0.5)', textAlign: 'center'
+        background: 'linear-gradient(160deg, rgba(26,20,16,0.97) 0%, rgba(18,14,10,0.97) 100%)',
+        border: '1px solid rgba(60,46,30,0.9)',
+        borderTop: '3px solid rgba(240,192,64,0.35)',
+        borderRadius: 10,
+        padding: '18px 22px 16px',
+        width: '100%', maxWidth: 580,
+        boxShadow: '0 8px 32px rgba(0,0,0,0.7)',
+        animation: 'fadeUp 0.25s ease-out forwards',
+        display: 'flex', flexDirection: 'column', gap: 12,
     }}>
         {title && (
-            <h3 style={{ marginTop: 0, borderBottom: '1px solid #444', paddingBottom: '10px' }}>
-                {title}
-            </h3>
+            <h3 style={{
+                fontFamily: 'Cinzel, serif', fontWeight: 700,
+                fontSize: 14, letterSpacing: 1.5, color: '#f0c040',
+                textTransform: 'uppercase', margin: 0, paddingBottom: 10,
+                borderBottom: '1px solid rgba(240,192,64,0.15)',
+            }}>{title}</h3>
         )}
         {children}
     </div>
 );
 
-const ActionButton: React.FC<{
-    children: React.ReactNode;
-    onClick: () => void;
-    color?: string;
-}> = ({ children, onClick, color = '#3c40c6' }) => (
-    <button
-        onClick={onClick}
-        style={{
-            flex: '1 1 28%', padding: '12px', fontSize: '15px', fontWeight: 'bold',
-            backgroundColor: color, color: '#FFF', border: 'none', borderRadius: '6px',
-            cursor: 'pointer'
-        }}
-        onMouseOver={e => (e.currentTarget.style.filter = 'brightness(1.2)')}
-        onMouseOut={e  => (e.currentTarget.style.filter = 'brightness(1)')}
-    >
+const WaitMsg: React.FC<{ children: React.ReactNode; icon?: string }> = ({ children, icon }) => (
+    <p style={{
+        fontFamily: 'Crimson Pro, serif', fontStyle: 'italic',
+        fontSize: 16, color: 'rgba(201,173,135,0.6)',
+        textAlign: 'center', padding: '8px 0',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+    }}>
+        {icon && <span>{icon}</span>}
         {children}
-    </button>
+    </p>
 );
 
-const ConfirmButton: React.FC<{ onClick: () => void; disabled?: boolean }> = ({ onClick, disabled }) => (
-    <button
-        onClick={onClick}
-        disabled={disabled}
-        style={{
-            padding: '10px 20px', backgroundColor: disabled ? '#555' : '#0be881',
-            color: disabled ? '#999' : '#1e272e', border: 'none', borderRadius: '6px',
-            fontWeight: 'bold', cursor: disabled ? 'not-allowed' : 'pointer',
-            marginTop: '10px'
-        }}
-    >
-        Confirm Action
-    </button>
-);
-
-const BackButton: React.FC<{ onClick: () => void }> = ({ onClick }) => (
-    <button
-        onClick={onClick}
-        style={{
-            marginTop: '12px', background: 'transparent', border: 'none',
-            color: '#ff7675', cursor: 'pointer', textDecoration: 'underline', fontSize: '13px'
-        }}
-    >
-        ← Back to Actions
-    </button>
-);
-
-const subMenuStyle: React.CSSProperties = {
-    display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'center'
+const COLOR_MAP: Record<string, { bg: string; text: string; border: string }> = {
+    candle: { bg: 'rgba(240,192,64,0.15)',  text: '#f0c040', border: 'rgba(240,192,64,0.45)' },
+    blood:  { bg: 'rgba(139,26,26,0.25)',   text: '#e05050', border: 'rgba(192,57,43,0.5)' },
+    mold:   { bg: 'rgba(58,90,58,0.25)',    text: '#6abf6a', border: 'rgba(74,122,74,0.5)' },
+    rust:   { bg: 'rgba(181,84,26,0.2)',    text: '#e0a060', border: 'rgba(181,84,26,0.5)' },
+    muted:  { bg: 'rgba(60,46,30,0.4)',     text: '#9aa5b4', border: 'rgba(60,46,30,0.7)' },
 };
 
-const labelStyle: React.CSSProperties = {
-    fontSize: '13px', fontWeight: 'bold', color: '#ccc', marginBottom: '-4px'
+const TavernBtn: React.FC<{
+    children: React.ReactNode;
+    color: string;
+    onClick: () => void;
+    disabled?: boolean;
+}> = ({ children, color, onClick, disabled }) => {
+    const cfg = COLOR_MAP[color] ?? COLOR_MAP.candle;
+    return (
+        <button onClick={onClick} disabled={disabled} style={{
+            flex: 1, padding: '10px 16px',
+            background: disabled ? 'rgba(30,20,16,0.5)' : cfg.bg,
+            color: disabled ? 'rgba(201,173,135,0.3)' : cfg.text,
+            border: `1px solid ${disabled ? 'rgba(60,46,30,0.4)' : cfg.border}`,
+            borderRadius: 6, fontSize: 14, fontFamily: 'Cinzel, serif',
+            letterSpacing: 0.5, fontWeight: 600,
+            cursor: disabled ? 'not-allowed' : 'pointer',
+            transition: 'all 0.2s ease',
+        }}
+                onMouseOver={e => { if (!disabled) e.currentTarget.style.filter = 'brightness(1.2)'; }}
+                onMouseOut={e  => { e.currentTarget.style.filter = 'brightness(1)'; }}
+        >{children}</button>
+    );
 };
 
-const inputStyle: React.CSSProperties = {
-    padding: '8px', borderRadius: '4px', border: '1px solid #ccc',
-    width: '80%', textAlign: 'center', color: '#111'
+const ActionTile: React.FC<{
+    action: typeof ACTIONS[0];
+    onClick: () => void;
+}> = ({ action, onClick }) => (
+    <button onClick={onClick} title={action.desc} style={{
+        background: 'rgba(26,20,16,0.8)',
+        border: `1px solid rgba(60,46,30,0.8)`,
+        borderBottom: `2px solid ${action.color}60`,
+        borderRadius: 8, padding: '10px 8px',
+        color: '#c9ad87', cursor: 'pointer',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+        transition: 'all 0.2s ease',
+    }}
+            onMouseOver={e => {
+                e.currentTarget.style.background = `${action.color}18`;
+                e.currentTarget.style.borderColor = `${action.color}60`;
+                e.currentTarget.style.color = '#f0c040';
+                e.currentTarget.style.transform = 'translateY(-2px)';
+            }}
+            onMouseOut={e => {
+                e.currentTarget.style.background = 'rgba(26,20,16,0.8)';
+                e.currentTarget.style.borderColor = 'rgba(60,46,30,0.8)';
+                e.currentTarget.style.color = '#c9ad87';
+                e.currentTarget.style.transform = 'translateY(0)';
+            }}>
+        <span style={{ fontSize: 20 }}>{action.icon}</span>
+        <span style={{
+            fontFamily: 'Cinzel, serif', fontSize: 10,
+            letterSpacing: 0.5, textTransform: 'uppercase',
+        }}>{action.label}</span>
+    </button>
+);
+
+const AscendInput: React.FC<{ value: number; onChange: (v: number) => void }> = ({ value, onChange }) => (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12, justifyContent: 'center' }}>
+        <button onClick={() => onChange(Math.max(1, value - 5))} style={stepBtnStyle}>−</button>
+        <div style={{ textAlign: 'center' }}>
+            <div style={{
+                fontFamily: 'Cinzel, serif', fontWeight: 900, fontSize: 32,
+                color: '#f0c040', lineHeight: 1,
+            }}>{value}</div>
+            <div style={{ fontFamily: 'Crimson Pro, serif', fontStyle: 'italic', fontSize: 12, color: '#9aa5b4' }}>
+                coins raised
+            </div>
+        </div>
+        <button onClick={() => onChange(value + 5)} style={stepBtnStyle}>+</button>
+    </div>
+);
+
+const stepBtnStyle: React.CSSProperties = {
+    width: 36, height: 36, borderRadius: '50%',
+    background: 'rgba(60,46,30,0.6)', border: '1px solid rgba(240,192,64,0.3)',
+    color: '#f0c040', fontSize: 20, lineHeight: 1,
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    cursor: 'pointer', padding: 0,
+};
+
+const Field: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, width: '100%' }}>
+        <label style={{
+            fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 1,
+            color: 'rgba(240,192,64,0.55)', textTransform: 'uppercase',
+        }}>{label}</label>
+        {children}
+    </div>
+);
+
+const BackLink: React.FC<{ onClick: () => void }> = ({ onClick }) => (
+    <button onClick={onClick} style={{
+        background: 'transparent', border: 'none',
+        color: 'rgba(201,173,135,0.4)', fontSize: 13,
+        fontFamily: 'Crimson Pro, serif', fontStyle: 'italic',
+        cursor: 'pointer', textDecoration: 'underline', padding: '0 8px',
+        flexShrink: 0,
+    }}>← Back</button>
+);
+
+const descStyle: React.CSSProperties = {
+    fontFamily: 'Crimson Pro, serif', fontStyle: 'italic',
+    fontSize: 14, color: 'rgba(201,173,135,0.7)', lineHeight: 1.5,
+};
+
+const rowStyle: React.CSSProperties = {
+    display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap',
+};
+
+const formStyle: React.CSSProperties = {
+    display: 'flex', flexDirection: 'column', gap: 12,
 };

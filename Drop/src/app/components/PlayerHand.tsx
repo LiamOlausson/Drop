@@ -9,79 +9,127 @@ interface PlayerHandProps {
     isActiveTurn?: boolean;
 }
 
-const RESULT_STYLE: Record<string, { label: string; color: string }> = {
-    Baron:    { label: '👑 Baron',    color: '#FFD700' },
-    Survivor: { label: '🛡️ Survivor', color: '#4caf50' },
-    Dead:     { label: '💀 Dead',     color: '#d32f2f' }
+const RESULT_CONFIG = {
+    Baron:    { label: '♛ Baron',    bg: '#8b1a1a', color: '#f0c040' },
+    Survivor: { label: '⚔ Survivor', bg: '#1e3a1e', color: '#6abf6a' },
+    Dead:     { label: '✝ Dead',     bg: '#1a1410', color: '#6b5e5e' },
 };
 
 export const PlayerHand: React.FC<PlayerHandProps> = ({ player, isCurrentPlayer, isActiveTurn }) => {
-    const resultCfg = player.handResult ? RESULT_STYLE[player.handResult] : null;
+    const result = player.handResult ? RESULT_CONFIG[player.handResult] : null;
+    const isOut = player.isDead || player.hasFolded;
+
+    const shortId = player.id.length > 12
+        ? player.id.substring(0, 10) + '…'
+        : player.id;
 
     return (
         <div style={{
             display: 'flex', flexDirection: 'column', alignItems: 'center',
-            padding: '16px',
-            backgroundColor: isActiveTurn ? 'rgba(255,215,0,0.12)' : 'rgba(0,0,0,0.4)',
-            border: isActiveTurn ? '2px solid #FFD700' : '2px solid #444',
-            borderRadius: '12px', width: '300px',
-            transition: 'all 0.3s ease',
-            opacity: (player.isDead || player.hasFolded) ? 0.5 : 1
+            gap: 10, padding: '14px 16px',
+            background: isActiveTurn
+                ? 'linear-gradient(160deg, rgba(240,192,64,0.08) 0%, rgba(46,35,24,0.9) 100%)'
+                : 'linear-gradient(160deg, rgba(30,20,16,0.95) 0%, rgba(22,16,12,0.95) 100%)',
+            border: isActiveTurn
+                ? '2px solid rgba(240,192,64,0.45)'
+                : '1px solid rgba(60,46,30,0.8)',
+            borderRadius: 12,
+            boxShadow: isActiveTurn
+                ? '0 0 20px rgba(240,192,64,0.15), 0 4px 16px rgba(0,0,0,0.6)'
+                : '0 4px 16px rgba(0,0,0,0.5)',
+            transition: 'all 0.35s ease',
+            opacity: isOut && !player.handResult ? 0.45 : 1,
+            minWidth: 170,
+            position: 'relative',
+            animation: 'fadeUp 0.4s ease-out forwards',
         }}>
-            {/* Header row */}
+            {/* Active turn indicator */}
+            {isActiveTurn && (
+                <div style={{
+                    position: 'absolute', top: -1, left: '50%', transform: 'translateX(-50%)',
+                    background: 'linear-gradient(90deg, #c0932b, #f0c040, #c0932b)',
+                    borderRadius: '0 0 6px 6px',
+                    padding: '2px 14px',
+                    fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 2,
+                    color: '#1a1410', textTransform: 'uppercase', whiteSpace: 'nowrap',
+                }}>
+                    {isCurrentPlayer ? 'Your Turn' : 'Acting…'}
+                </div>
+            )}
+
+            {/* Header */}
             <div style={{
                 width: '100%', display: 'flex', justifyContent: 'space-between',
-                marginBottom: '8px', color: '#FFF', fontWeight: 'bold', fontSize: '13px'
+                alignItems: 'center', marginTop: isActiveTurn ? 8 : 0,
             }}>
-                <span>{player.id.substring(0, 10)}… {isCurrentPlayer && '(You)'}</span>
-                <span style={{ color: '#FFD700' }}>💰 {player.balance}</span>
+        <span style={{
+            fontFamily: 'Cinzel, serif', fontSize: 11, letterSpacing: 0.5,
+            color: isCurrentPlayer ? '#f0c040' : '#c9ad87',
+            fontWeight: isCurrentPlayer ? 700 : 400,
+        }}>
+          {shortId}{isCurrentPlayer && ' ★'}
+        </span>
+                <span style={{
+                    fontFamily: 'Crimson Pro, serif', fontSize: 14,
+                    color: '#c9ad87',
+                }}>
+          🪙 {player.balance}
+        </span>
             </div>
 
-            {/* Ante paid */}
-            <div style={{
-                width: '100%', display: 'flex', justifyContent: 'flex-end',
-                marginBottom: '8px', color: '#aaa', fontSize: '12px'
-            }}>
-                Ante in: <strong style={{ color: '#FFF', marginLeft: '4px' }}>{player.antePaid}</strong>
-            </div>
+            {/* Ante paid badge */}
+            {player.antePaid > 0 && (
+                <div style={{
+                    alignSelf: 'flex-end',
+                    fontFamily: 'Crimson Pro, serif', fontStyle: 'italic',
+                    fontSize: 11, color: 'rgba(201,173,135,0.5)',
+                }}>
+                    {player.antePaid} ante in
+                </div>
+            )}
 
-            {/* Status badges */}
-            {resultCfg && (
+            {/* Status badge */}
+            {result ? (
                 <div style={{
-                    backgroundColor: resultCfg.color, color: '#111',
-                    padding: '3px 12px', borderRadius: '4px',
-                    marginBottom: '10px', fontSize: '12px', fontWeight: 'bold'
+                    background: result.bg, color: result.color,
+                    padding: '3px 14px', borderRadius: 4,
+                    fontFamily: 'Cinzel, serif', fontSize: 11, letterSpacing: 1,
+                    border: `1px solid ${result.color}40`,
                 }}>
-                    {resultCfg.label}
+                    {result.label}
                 </div>
-            )}
-            {!resultCfg && (player.isDead || player.hasFolded) && (
+            ) : isOut ? (
                 <div style={{
-                    backgroundColor: player.isDead ? '#d32f2f' : '#555',
-                    color: 'white', padding: '4px 12px', borderRadius: '4px',
-                    marginBottom: '10px', fontSize: '12px', fontWeight: 'bold'
+                    background: '#1a1410', color: '#6b5e5e',
+                    padding: '3px 14px', borderRadius: 4,
+                    fontFamily: 'Crimson Pro, serif', fontStyle: 'italic', fontSize: 12,
                 }}>
-                    {player.isDead ? '💀 Dead' : 'Folded'}
+                    {player.isDead ? '✝ Eliminated' : '⚑ Folded'}
                 </div>
-            )}
+            ) : null}
 
             {/* Cards */}
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
-                {player.hand.map(card => (
-                    <div
-                        key={card.id}
-                        style={{
-                            transform: isCurrentPlayer ? 'translateY(-8px)' : 'none',
-                            transition: 'transform 0.2s ease'
-                        }}
-                    >
-                        <Card card={card} hidden={!isCurrentPlayer && !card.isRevealed} />
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'center', flexWrap: 'wrap' }}>
+                {player.hand.map((card, i) => (
+                    <div key={card.id} style={{
+                        transform: isCurrentPlayer ? `translateY(-${i % 2 === 0 ? 4 : 0}px)` : 'none',
+                        transition: 'transform 0.2s ease',
+                        animationDelay: `${i * 0.08}s`,
+                    }}>
+                        <Card
+                            card={card}
+                            hidden={!isCurrentPlayer && !card.isRevealed}
+                            size="sm"
+                        />
                     </div>
                 ))}
                 {player.hand.length === 0 && (
-                    <span style={{ color: '#666', fontStyle: 'italic', padding: '40px 0' }}>
-                        No cards
-                    </span>
+                    <span style={{
+                        fontFamily: 'Crimson Pro, serif', fontStyle: 'italic',
+                        color: 'rgba(201,173,135,0.3)', fontSize: 13, padding: '30px 20px',
+                    }}>
+            no cards
+          </span>
                 )}
             </div>
         </div>

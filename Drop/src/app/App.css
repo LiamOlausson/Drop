@@ -1,88 +1,161 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&family=IM+Fell+English:ital@0;1&display=swap');
+
+/* ============================================================
+   DROP — TAVERN THEME DESIGN SYSTEM
+   ============================================================ */
 :root {
-	font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
-	line-height: 1.5;
-	font-weight: 400;
+    /* Color Palette */
+    --ink:        #0d0a07;
+    --soot:       #1a1410;
+    --char:       #231c15;
+    --ember:      #2e2318;
+    --wood:       #3d2e1e;
+    --parchment:  #c9ad87;
+    --vellum:     #e8d5b0;
+    --bone:       #f5ead0;
+    --candle:     #f0c040;
+    --flame:      #e8862a;
+    --blood:      #8b1a1a;
+    --crimson:    #c0392b;
+    --rust:       #b5541a;
+    --mold:       #3a5a3a;
+    --moss:       #4a7a4a;
+    --silver:     #9aa5b4;
+    --pewter:     #6b7a8d;
 
-	color-scheme: light dark;
-	color: rgba(255, 255, 255, 0.87);
-	background-color: #242424;
+    /* Typography */
+    --font-display: 'Cinzel', serif;
+    --font-body:    'Crimson Pro', serif;
+    --font-accent:  'IM Fell English', serif;
 
-	font-synthesis: none;
-	text-rendering: optimizeLegibility;
-	-webkit-font-smoothing: antialiased;
-	-moz-osx-font-smoothing: grayscale;
-}
+    /* Textures */
+    --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
 
-a {
-	font-weight: 500;
-	color: #646cff;
-	text-decoration: inherit;
-}
-a:hover {
-	color: #535bf2;
-}
+    /* Spacing */
+    --sp-xs: 4px;
+    --sp-sm: 8px;
+    --sp-md: 16px;
+    --sp-lg: 24px;
+    --sp-xl: 40px;
 
-body {
-	margin: 0;
-	display: flex;
-	place-items: center;
-	min-width: 320px;
-	min-height: 100vh;
-}
-
-h1 {
-	font-size: 3.2em;
-	line-height: 1.1;
-}
-
-#root {
-	max-width: 1280px;
-	margin: 0 auto;
-	padding: 2rem;
-	text-align: center;
+    /* Shadows */
+    --shadow-card:  0 4px 20px rgba(0,0,0,0.6), 0 1px 3px rgba(0,0,0,0.8);
+    --shadow-deep:  0 8px 40px rgba(0,0,0,0.8);
+    --shadow-glow:  0 0 20px rgba(240,192,64,0.2);
+    --shadow-blood: 0 0 20px rgba(139,26,26,0.4);
 }
 
-.logo {
-	height: 6em;
-	padding: 1.5em;
-	will-change: filter;
-	transition: filter 300ms;
-}
-.logo:hover {
-	filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.vanilla:hover {
-	filter: drop-shadow(0 0 2em #f7df1eaa);
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body, #root {
+    width: 100%; min-height: 100vh;
+    background: var(--ink);
+    color: var(--parchment);
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
 }
 
-button {
-	border-radius: 8px;
-	border: 1px solid transparent;
-	padding: 0.6em 1.2em;
-	font-size: 1em;
-	font-weight: 500;
-	font-family: inherit;
-	background-color: #1a1a1a;
-	cursor: pointer;
-	transition: border-color 0.25s;
-}
-button:hover {
-	border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-	outline: 4px auto -webkit-focus-ring-color;
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--soot); }
+::-webkit-scrollbar-thumb { background: var(--wood); border-radius: 3px; }
+
+/* ── Base Typography ── */
+h1, h2, h3, h4 { font-family: var(--font-display); letter-spacing: 0.05em; color: var(--candle); }
+p { font-family: var(--font-body); }
+
+/* ── Utility ── */
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
+
+/* ── Woodgrain background overlay ── */
+body::before {
+    content: '';
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background-image:
+            repeating-linear-gradient(
+                    92deg,
+                    transparent,
+                    transparent 3px,
+                    rgba(255,255,255,0.007) 3px,
+                    rgba(255,255,255,0.007) 4px
+            ),
+            repeating-linear-gradient(
+                    180deg,
+                    transparent,
+                    transparent 60px,
+                    rgba(0,0,0,0.06) 60px,
+                    rgba(0,0,0,0.06) 61px
+            );
 }
 
-@media (prefers-color-scheme: light) {
-	:root {
-		color: #213547;
-		background-color: #ffffff;
-	}
-	a:hover {
-		color: #747bff;
-	}
-	button {
-		background-color: #f9f9f9;
-	}
+/* ── Candlelight vignette ── */
+body::after {
+    content: '';
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background: radial-gradient(
+            ellipse 70% 60% at 50% 30%,
+            rgba(240,192,64,0.05) 0%,
+            transparent 60%
+    ),
+    radial-gradient(
+            ellipse 100% 100% at 50% 50%,
+            transparent 40%,
+            rgba(0,0,0,0.5) 100%
+    );
+}
+
+/* ── Interactive States ── */
+button { cursor: pointer; font-family: var(--font-display); transition: all 0.2s ease; }
+button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+select, input[type="number"] {
+    font-family: var(--font-body);
+    background: var(--char);
+    color: var(--parchment);
+    border: 1px solid var(--wood);
+    border-radius: 4px;
+    padding: 8px 12px;
+    font-size: 15px;
+    width: 100%;
+    outline: none;
+    transition: border-color 0.2s;
+}
+select:focus, input:focus { border-color: var(--candle); }
+
+/* ── Divider ── */
+.rune-divider {
+    display: flex; align-items: center; gap: 12px;
+    color: var(--wood); font-family: var(--font-accent); font-size: 18px;
+}
+.rune-divider::before, .rune-divider::after {
+    content: ''; flex: 1; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--wood), transparent);
+}
+
+/* ── Animations ── */
+@keyframes flicker {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.92; }
+    75% { opacity: 0.96; }
+}
+@keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes pulse-glow {
+    0%, 100% { box-shadow: 0 0 12px rgba(240,192,64,0.3); }
+    50%       { box-shadow: 0 0 24px rgba(240,192,64,0.6); }
+}
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-4px); }
+    40% { transform: translateX(4px); }
+    60% { transform: translateX(-3px); }
+    80% { transform: translateX(3px); }
+}
+@keyframes cardDeal {
+    from { opacity: 0; transform: translateY(-30px) rotate(-5deg) scale(0.9); }
+    to   { opacity: 1; transform: translateY(0) rotate(0deg) scale(1); }
 }
