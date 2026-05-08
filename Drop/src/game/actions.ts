@@ -329,7 +329,7 @@ export async function performAscend(
 ): Promise<boolean> {
     const state = await getDropState(channelId);
     if (!state || state.turnOrder[state.currentTurnIndex] !== playerId) return false;
-    if (state.phase !== 'TheClimb' && state.phase !== 'Battle') return false;
+    if (state.phase !== 'The Climb' && state.phase !== 'Battle') return false;
 
     // FIX: If a player Passes (Raises 0), don't trigger the pending interaction, just advance their turn
     if (raiseAmount === 0) {
