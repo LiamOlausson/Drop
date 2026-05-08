@@ -33,7 +33,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({ channelName, executeAction
                     fontSize: 13, letterSpacing: 4, color: 'rgba(201,173,135,0.5)',
                     textTransform: 'uppercase', marginBottom: 12,
                 }}>
-                    The Web's Favoured Game
+                    Sahalian's Favoured Game
                 </p>
 
                 <h1 style={{
@@ -83,7 +83,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({ channelName, executeAction
                 fontStyle: 'italic',
             }}>
                 "Played in every tavern and home to sharpen the instincts
-                needed to navigate Sahalian. Ruthlessly dominant — or
+                needed to navigate Sahalian. Ruthlessly dominant, or
                 perfectly invisible. There is no middle ground."
             </p>
 
