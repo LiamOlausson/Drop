@@ -5,7 +5,8 @@ import { initializeGame, joinGame, destroyGame, getDropState } from '../../game/
 import {
     startHand, performScavenge, performDive, performAscend,
     performSnitch, performSabotage, performSmuggle,
-    passSmuggle, challengeSmuggle, respondToAscend
+    passSmuggle, challengeSmuggle, respondToAscend, executeDecreeHollow,
+    executeDecreeGlowWorm, executeDecreeCitizen, executeDecreeWarden, executeDecreeBaron
 } from '../../game/actions.js';
 
 export default async (req: RoboRequest) => {
@@ -76,6 +77,24 @@ export default async (req: RoboRequest) => {
             case 'ChallengeSmuggle':
                 await challengeSmuggle(channelId, userId);
                 success = true;
+                break;
+            case 'ExecuteDecree':
+                // Route to the correct decree based on the payload
+                if (payload.decreeType === 'Hollow') {
+                    success = await executeDecreeHollow(channelId, userId, payload.targetId);
+                }
+                else if (payload.decreeType === 'Glow Worm') {
+                    success = await executeDecreeGlowWorm(channelId, userId, payload.targetId);
+                }
+                else if (payload.decreeType === 'Citizen') {
+                    success = await executeDecreeCitizen(channelId, userId, payload.discardCardId, payload.handCardId);
+                }
+                else if (payload.decreeType === 'Warden') {
+                    success = await executeDecreeWarden(channelId, userId, payload.targetId);
+                }
+                else if (payload.decreeType === 'Baron') {
+                    success = await executeDecreeBaron(channelId, userId, payload.targetId);
+                }
                 break;
             default:
                 return RoboResponse.json({ error: 'Unknown action type' }, { status: 400 });

@@ -208,7 +208,44 @@ export const ActiveGameView: React.FC<ActiveGameViewProps> = ({ gameState, userI
                 {/* ── Active Game Layout ── */}
                 {!isSetup && (
                     <>
-                        {/* FIX 4: Center = table + your hand stacked */}
+                        {/* NEW: Left panel = Whispers Log */}
+                        <div style={{
+                            width: 200,
+                            borderRight: '1px solid rgba(60,46,30,0.6)',
+                            background: 'rgba(13,10,7,0.6)',
+                            display: 'flex', flexDirection: 'column',
+                            overflow: 'hidden',
+                            flexShrink: 0,
+                        }}>
+                            <div style={{
+                                padding: '10px 12px 8px',
+                                borderBottom: '1px solid rgba(60,46,30,0.5)',
+                                flexShrink: 0,
+                            }}>
+                                <span style={{
+                                    fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 3,
+                                    color: 'rgba(240,192,64,0.4)', textTransform: 'uppercase',
+                                }}>Whispers</span>
+                            </div>
+                            <div style={{
+                                flex: 1, overflowY: 'auto', padding: '10px 12px',
+                                display: 'flex', flexDirection: 'column', gap: 8,
+                            }}>
+                                {gameState.whispers && gameState.whispers.length > 0 ? (
+                                    gameState.whispers.map((w, i) => (
+                                        <span key={i} style={{ fontFamily: 'Crimson Pro, serif', fontStyle: 'italic', fontSize: 13, color: 'rgba(201,173,135,0.8)', lineHeight: 1.3 }}>
+                                            👁 <strong style={{ color: '#f0c040' }}>{getName(w.subjectId)}</strong> {w.text}
+                                        </span>
+                                    ))
+                                ) : (
+                                    <span style={{ fontFamily: 'Crimson Pro, serif', fontStyle: 'italic', fontSize: 13, color: 'rgba(201,173,135,0.3)', textAlign: 'center', marginTop: 10 }}>
+                                        The Sump is quiet…
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Center = table + your hand stacked */}
                         <div style={{
                             flex: 1, display: 'flex', flexDirection: 'column',
                             alignItems: 'center', overflow: 'hidden',
