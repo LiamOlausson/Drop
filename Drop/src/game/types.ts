@@ -121,4 +121,11 @@ export interface DropGameState {
     handResults?: HandResult[]; // Populated after Judgement; cleared at start of next hand
     pendingSmuggle?: SmuggleChallengeState;
     pendingAscend?: AscendChallengeState;
+
+    // Gamemodes
+    playerTracking: boolean;
+    assignedNames: Record<string, string>;
+
+    // Dev/Admin/Host
+    hostId: string;
 }

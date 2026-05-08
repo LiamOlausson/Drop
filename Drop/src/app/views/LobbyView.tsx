@@ -1,5 +1,5 @@
 // src/app/views/LobbyView.tsx
-import React from 'react';
+import React, { useState } from 'react';
 import type { ActionType } from '../../game/types';
 
 interface LobbyViewProps {
@@ -8,6 +8,7 @@ interface LobbyViewProps {
 }
 
 export const LobbyView: React.FC<LobbyViewProps> = ({ channelName, executeAction }) => {
+    const [playerTracking, setPlayerTracking] = useState(false);
     return (
         <div style={{
             display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
@@ -85,33 +86,47 @@ export const LobbyView: React.FC<LobbyViewProps> = ({ channelName, executeAction
                 perfectly invisible. There is no middle ground."
             </p>
 
-            {/* CTA */}
-            <button
-                onClick={() => executeAction('Initialize')}
-                style={{
-                    background: 'linear-gradient(160deg, rgba(240,192,64,0.15) 0%, rgba(192,147,43,0.1) 100%)',
-                    border: '1px solid rgba(240,192,64,0.45)',
-                    borderRadius: 8, padding: '14px 44px',
-                    fontFamily: 'Cinzel, serif', fontWeight: 700,
-                    fontSize: 16, letterSpacing: 2, textTransform: 'uppercase',
-                    color: '#f0c040',
-                    cursor: 'pointer',
-                    boxShadow: '0 0 20px rgba(240,192,64,0.1), 0 4px 16px rgba(0,0,0,0.5)',
-                    transition: 'all 0.25s ease',
-                }}
-                onMouseOver={e => {
-                    e.currentTarget.style.background = 'linear-gradient(160deg, rgba(240,192,64,0.25) 0%, rgba(192,147,43,0.2) 100%)';
-                    e.currentTarget.style.boxShadow = '0 0 30px rgba(240,192,64,0.2), 0 4px 20px rgba(0,0,0,0.6)';
-                    e.currentTarget.style.transform = 'translateY(-1px)';
-                }}
-                onMouseOut={e => {
-                    e.currentTarget.style.background = 'linear-gradient(160deg, rgba(240,192,64,0.15) 0%, rgba(192,147,43,0.1) 100%)';
-                    e.currentTarget.style.boxShadow = '0 0 20px rgba(240,192,64,0.1), 0 4px 16px rgba(0,0,0,0.5)';
-                    e.currentTarget.style.transform = 'translateY(0)';
-                }}
-            >
-                ⚔ Open a Table
-            </button>
+            {/* CTA and Settings */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+                <button
+                    onClick={() => executeAction('Initialize', { playerTracking })}
+                    style={{
+                        background: 'linear-gradient(160deg, rgba(240,192,64,0.15) 0%, rgba(192,147,43,0.1) 100%)',
+                        border: '1px solid rgba(240,192,64,0.45)',
+                        borderRadius: 8, padding: '14px 44px',
+                        fontFamily: 'Cinzel, serif', fontWeight: 700,
+                        fontSize: 16, letterSpacing: 2, textTransform: 'uppercase',
+                        color: '#f0c040', cursor: 'pointer',
+                        boxShadow: '0 0 20px rgba(240,192,64,0.1), 0 4px 16px rgba(0,0,0,0.5)',
+                        transition: 'all 0.25s ease',
+                    }}
+                    onMouseOver={e => {
+                        e.currentTarget.style.background = 'linear-gradient(160deg, rgba(240,192,64,0.25) 0%, rgba(192,147,43,0.2) 100%)';
+                        e.currentTarget.style.boxShadow = '0 0 30px rgba(240,192,64,0.2), 0 4px 20px rgba(0,0,0,0.6)';
+                        e.currentTarget.style.transform = 'translateY(-1px)';
+                    }}
+                    onMouseOut={e => {
+                        e.currentTarget.style.background = 'linear-gradient(160deg, rgba(240,192,64,0.15) 0%, rgba(192,147,43,0.1) 100%)';
+                        e.currentTarget.style.boxShadow = '0 0 20px rgba(240,192,64,0.1), 0 4px 16px rgba(0,0,0,0.5)';
+                        e.currentTarget.style.transform = 'translateY(0)';
+                    }}
+                >
+                    ⚔ Open a Table
+                </button>
+
+                <label style={{
+                    fontFamily: 'Crimson Pro, serif', fontSize: 15, color: 'rgba(201,173,135,0.7)',
+                    display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer'
+                }}>
+                    <input
+                        type="checkbox"
+                        checked={playerTracking}
+                        onChange={e => setPlayerTracking(e.target.checked)}
+                        style={{ accentColor: '#f0c040', width: 16, height: 16 }}
+                    />
+                    Save Balances & Discord Names
+                </label>
+            </div>
 
             {/* Bottom rule */}
             <div style={{

@@ -567,8 +567,7 @@ async function resolveSmuggle(state: DropGameState, challengerId?: string) {
             }
             case 'Citizen': {
                 // Loser pays an ante directly to the winner
-                // Using 10 as the standard base ante
-                const payment = Math.min(loser.balance, 10);
+                const payment = Math.min(loser.balance, state.currentAnteToCall);
                 loser.balance   -= payment;
                 winner.balance  += payment;
                 break;

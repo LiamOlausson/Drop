@@ -1,7 +1,7 @@
 // src/api/game/action.ts
 import { RoboResponse } from '@robojs/server';
 import type { RoboRequest } from '@robojs/server';
-import { initializeGame, joinGame } from '../../game/state.js';
+import { initializeGame, joinGame, destroyGame, getDropState } from '../../game/state.js';
 import {
     startHand, performScavenge, performDive, performAscend,
     performSnitch, performSabotage, performSmuggle,
@@ -25,8 +25,23 @@ export default async (req: RoboRequest) => {
     try {
         switch (action) {
             case 'Initialize':
-                await initializeGame(channelId);
+                // Check payload for the playerTracking preference, default to false
+                await initializeGame(channelId, payload?.playerTracking ?? false);
                 success = true;
+                break;
+            case 'ReturnToLobby':
+                const currentState = await getDropState(channelId);
+                // Allow the host, or the first player (if old state), or anyone (if empty old state) to wipe it
+                if (currentState && (
+                    currentState.hostId === userId ||
+                    (!currentState.hostId && currentState.turnOrder[0] === userId) ||
+                    (!currentState.hostId && currentState.turnOrder.length === 0)
+                )) {
+                    await destroyGame(channelId);
+                    success = true;
+                } else {
+                    success = false; // Rejected: Not the host
+                }
                 break;
             case 'Join':
                 success = await joinGame(channelId, userId);

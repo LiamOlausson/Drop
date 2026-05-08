@@ -18,10 +18,9 @@ export const ActiveGameView: React.FC<ActiveGameViewProps> = ({ gameState, userI
     const opponents = gameState.turnOrder.filter(id => id !== userId);
     const isSetup = gameState.phase === 'Setup';
     const isLeader = gameState.turnOrder[gameState.handLeaderIndex] === userId;
-    const isHost = gameState.turnOrder[0] === userId;
+    const isHost = gameState.hostId === userId || (!gameState.hostId && gameState.turnOrder[0] === userId);
     const [anteAmount, setAnteAmount] = useState<number>(10);
-
-    const getName = (id: string) => playerNames[id] || id.substring(0, 10) + '…';
+    const getName = (id: string) => gameState.assignedNames?.[id] || playerNames[id] || id.substring(0, 10) + '…';
 
     // FIX 7: Entire layout is viewport-locked, no scrolling
     return (
@@ -50,19 +49,32 @@ export const ActiveGameView: React.FC<ActiveGameViewProps> = ({ gameState, userI
                         textShadow: '0 0 20px rgba(240,192,64,0.2)',
                     }}>DROP</span>
 
-                    {/* ADD THIS: Reset Lobby Dev Tool for the Host */}
+                    {/* Admin buttons for the Host */}
                     {isHost && (
-                        <button
-                            onClick={() => executeAction('Initialize')}
-                            style={{
-                                background: 'rgba(139,26,26,0.2)', border: '1px solid rgba(192,57,43,0.5)',
-                                color: '#e05050', fontSize: 10, fontFamily: 'Cinzel, serif',
-                                padding: '4px 8px', borderRadius: 4, cursor: 'pointer',
-                                textTransform: 'uppercase', letterSpacing: 1
-                            }}
-                        >
-                            Reset Lobby
-                        </button>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                            <button
+                                onClick={() => executeAction('ReturnToLobby')}
+                                style={{
+                                    background: 'rgba(139,26,26,0.2)', border: '1px solid rgba(192,57,43,0.5)',
+                                    color: '#e05050', fontSize: 10, fontFamily: 'Cinzel, serif',
+                                    padding: '4px 8px', borderRadius: 4, cursor: 'pointer',
+                                    textTransform: 'uppercase', letterSpacing: 1
+                                }}
+                            >
+                                Return to Lobby
+                            </button>
+                            <button
+                                onClick={() => executeAction('Initialize', { playerTracking: gameState.playerTracking })}
+                                style={{
+                                    background: 'rgba(139,26,26,0.2)', border: '1px solid rgba(192,57,43,0.5)',
+                                    color: '#e05050', fontSize: 10, fontFamily: 'Cinzel, serif',
+                                    padding: '4px 8px', borderRadius: 4, cursor: 'pointer',
+                                    textTransform: 'uppercase', letterSpacing: 1
+                                }}
+                            >
+                                Reset Game
+                            </button>
+                        </div>
                     )}
                 </div>
 
@@ -139,7 +151,8 @@ export const ActiveGameView: React.FC<ActiveGameViewProps> = ({ gameState, userI
                                         ⚔ Sit Down
                                     </button>
                                 )}
-                                {isPlayerInGame && isLeader && gameState.turnOrder.length >= 1 && (
+                                {/* Allow isLeader OR isHost to deal */}
+                                {isPlayerInGame && (isLeader || isHost) && gameState.turnOrder.length >= 1 && (
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center' }}>
                                             <span style={{ fontFamily: 'Cinzel, serif', fontSize: 11, color: '#c9ad87', textTransform: 'uppercase' }}>Base Ante:</span>
@@ -166,7 +179,9 @@ export const ActiveGameView: React.FC<ActiveGameViewProps> = ({ gameState, userI
                                         </button>
                                     </div>
                                 )}
-                                {isPlayerInGame && !isLeader && (
+
+                                {/* Waiting message only shows if you aren't the leader AND aren't the host */}
+                                {isPlayerInGame && !isLeader && !isHost && (
                                     <p style={{
                                         fontFamily: 'Crimson Pro, serif', fontStyle: 'italic',
                                         fontSize: 13, color: 'rgba(201,173,135,0.4)', flex: 1,
@@ -176,7 +191,7 @@ export const ActiveGameView: React.FC<ActiveGameViewProps> = ({ gameState, userI
                                 )}
                             </div>
 
-                            {/* UPDATE the warning to reference the new dynamic anteAmount */}
+                            {/* update the warning to reference the new dynamic anteAmount */}
                             {myPlayer && myPlayer.balance < anteAmount && (
                                 <p style={{ fontFamily: 'Crimson Pro, serif', fontStyle: 'italic', fontSize: 13, color: '#c05050', marginTop: 10 }}>
                                     ⚠ Not enough coin to ante (need {anteAmount} 🪙)

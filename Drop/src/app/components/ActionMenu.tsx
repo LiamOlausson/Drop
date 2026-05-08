@@ -34,7 +34,7 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({ gameState, playerId, pla
         id => id !== playerId && !gameState.players[id].isDead && !gameState.players[id].hasFolded
     );
 
-    const getName = (id: string) => playerNames[id] || id.substring(0, 10) + '…';
+    const getName = (id: string) => gameState.assignedNames?.[id] || playerNames[id] || id.substring(0, 10) + '…';
 
     const back = () => {
         setSelectedAction(null);

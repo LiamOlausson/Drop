@@ -19,7 +19,9 @@ const RESULT_STYLE = {
 export const JudgementView: React.FC<JudgementViewProps> = ({ gameState, userId, playerNames, executeAction }) => {
     const myResult = gameState.players[userId]?.handResult;
     const myCfg    = myResult ? RESULT_STYLE[myResult] : null;
-    const getName  = (id: string) => playerNames[id] || id.substring(0, 10) + '…';
+    const getName  = (id: string) => gameState.assignedNames?.[id] || playerNames[id] || id.substring(0, 10) + '…';
+    const isHost = gameState.hostId === userId || (!gameState.hostId && gameState.turnOrder[0] === userId);
+    const isLeader = gameState.turnOrder[gameState.handLeaderIndex] === userId;
     const [anteAmount, setAnteAmount] = useState<number>(10);
 
     return (
@@ -170,33 +172,39 @@ export const JudgementView: React.FC<JudgementViewProps> = ({ gameState, userId,
                     </div>
 
                     <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
-                        <button
-                            onClick={() => executeAction('StartHand', { anteAmount })}
-                            style={{
-                                padding: '10px 28px',
-                                background: 'rgba(240,192,64,0.12)',
-                                border: '1px solid rgba(240,192,64,0.4)',
-                                borderRadius: 7, fontFamily: 'Cinzel, serif',
-                                fontSize: 13, fontWeight: 700, letterSpacing: 1,
-                                color: '#f0c040', cursor: 'pointer', transition: 'all 0.2s ease',
-                            }}
-                            onMouseOver={e => { e.currentTarget.style.background = 'rgba(240,192,64,0.22)'; }}
-                            onMouseOut={e  => { e.currentTarget.style.background = 'rgba(240,192,64,0.12)'; }}
-                        >🃏 Deal Next Hand</button>
+                        {/* Allow Leader or Host to start the next hand */}
+                        {(isHost || isLeader) && (
+                            <button
+                                onClick={() => executeAction('StartHand', { anteAmount })}
+                                style={{
+                                    padding: '10px 28px',
+                                    background: 'rgba(240,192,64,0.12)',
+                                    border: '1px solid rgba(240,192,64,0.4)',
+                                    borderRadius: 7, fontFamily: 'Cinzel, serif',
+                                    fontSize: 13, fontWeight: 700, letterSpacing: 1,
+                                    color: '#f0c040', cursor: 'pointer', transition: 'all 0.2s ease',
+                                }}
+                                onMouseOver={e => { e.currentTarget.style.background = 'rgba(240,192,64,0.22)'; }}
+                                onMouseOut={e  => { e.currentTarget.style.background = 'rgba(240,192,64,0.12)'; }}
+                            >🃏 Deal Next Hand</button>
+                        )}
 
-                        <button
-                            onClick={() => executeAction('Initialize')}
-                            style={{
-                                padding: '10px 28px',
-                                background: 'rgba(26,20,16,0.8)',
-                                border: '1px solid rgba(60,46,30,0.8)',
-                                borderRadius: 7, fontFamily: 'Cinzel, serif',
-                                fontSize: 13, fontWeight: 600, letterSpacing: 1,
-                                color: 'rgba(201,173,135,0.5)', cursor: 'pointer', transition: 'all 0.2s ease',
-                            }}
-                            onMouseOver={e => { e.currentTarget.style.color = '#c9ad87'; }}
-                            onMouseOut={e  => { e.currentTarget.style.color = 'rgba(201,173,135,0.5)'; }}
-                        >← Return to Lobby</button>
+                        {/* Restrict to Host and use ReturnToLobby */}
+                        {isHost && (
+                            <button
+                                onClick={() => executeAction('ReturnToLobby')}
+                                style={{
+                                    padding: '10px 28px',
+                                    background: 'rgba(26,20,16,0.8)',
+                                    border: '1px solid rgba(60,46,30,0.8)',
+                                    borderRadius: 7, fontFamily: 'Cinzel, serif',
+                                    fontSize: 13, fontWeight: 600, letterSpacing: 1,
+                                    color: 'rgba(201,173,135,0.5)', cursor: 'pointer', transition: 'all 0.2s ease',
+                                }}
+                                onMouseOver={e => { e.currentTarget.style.color = '#c9ad87'; }}
+                                onMouseOut={e  => { e.currentTarget.style.color = 'rgba(201,173,135,0.5)'; }}
+                            >← Return to Lobby</button>
+                        )}
                     </div>
                 </div>
             </div>

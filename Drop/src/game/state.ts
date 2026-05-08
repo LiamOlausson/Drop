@@ -1,17 +1,24 @@
 // src/game/state.ts
-import { getState, setState } from 'robo.js';
+import { getState, setState, Flashcore } from 'robo.js';
 import type { DropGameState } from './types';
 import { getShuffledDeck } from './deck';
 
 const STATE_KEY = 'drop-game-state';
 const DEFAULT_STARTING_BALANCE = 500;
 
+const ANONYMOUS_NAMES = [
+    "Kaito", "Björn", "Marina", "Akari", "Etu",
+    "Anabelle", "Elania", "Lime", "Abel", "Julian",
+    "Vasses", "The First Listener", "Vane", "Kess", "Seraphiel",
+    "Lailah", "Obi", "Rina", "Asa", "Hino"
+];
+
 /**
  * Initializes a fresh game of Drop for a specific Discord channel.
  * This sets up the initial empty pot, starting phases, and generates a new shuffled deck.
  * * @param channelId The Discord Channel ID to use as the namespace
  */
-export async function initializeGame(channelId: string): Promise<DropGameState> {
+export async function initializeGame(channelId: string, hostId: string, playerTracking: boolean = false): Promise<DropGameState> {
     const freshDeck = getShuffledDeck();
 
     const initialState: DropGameState = {
@@ -19,20 +26,19 @@ export async function initializeGame(channelId: string): Promise<DropGameState> 
         currentAnteToCall: 0,
         startingBalance: DEFAULT_STARTING_BALANCE,
         roundNumber: 1,
-
         turnOrder: [],
         currentTurnIndex: 0,
         handLeaderIndex: 0,
         climbRoundCount: 0,
         turnsInCurrentRound: 0,
-
         players: {},
-
         drawPile: freshDeck,
         discardPile: [],
         fallenPile: [],
-
-        phase: 'Setup'
+        phase: 'Setup',
+        hostId,
+        playerTracking,
+        assignedNames: {}
     };
 
     await setState(STATE_KEY, initialState, { namespace: channelId });
@@ -58,6 +64,18 @@ export async function getDropState(channelId: string): Promise<DropGameState | n
  * @param newState The modified DropGameState to save
  */
 export async function saveDropState(channelId: string, newState: DropGameState): Promise<void> {
+    // If tracking is enabled, persist every player's balance to Flashcore
+    if (newState.playerTracking) {
+        const savePromises = newState.turnOrder.map(playerId => {
+            const player = newState.players[playerId];
+            if (player) {
+                return Flashcore.set(`balance_${playerId}`, player.balance);
+            }
+            return Promise.resolve();
+        });
+        await Promise.all(savePromises);
+    }
+
     await setState(STATE_KEY, newState, { namespace: channelId });
 }
 
@@ -73,12 +91,30 @@ export async function joinGame(channelId: string, userId: string): Promise<boole
     if (state.phase !== 'Setup') return false;
     if (state.turnOrder.includes(userId)) return true;
 
+    let startingBalance = DEFAULT_STARTING_BALANCE;
+
+    if (state.playerTracking) {
+        // Load persistent balance from Flashcore
+        const savedBalance = await Flashcore.get<number>(`balance_${userId}`);
+        if (typeof savedBalance === 'number') {
+            startingBalance = savedBalance;
+        }
+    } else {
+        // Assign a random thematic name to the player
+        const usedNames = Object.values(state.assignedNames);
+        const availableNames = ANONYMOUS_NAMES.filter(n => !usedNames.includes(n));
+        const chosenName = availableNames.length > 0
+            ? availableNames[Math.floor(Math.random() * availableNames.length)]
+            : `Anon-${Math.floor(Math.random() * 1000)}`;
+        state.assignedNames[userId] = chosenName;
+    }
+
     state.turnOrder.push(userId);
     state.players[userId] = {
         id: userId,
         hand: [],
         antePaid: 0,
-        balance: state.startingBalance,
+        balance: startingBalance,
         isDead: false,
         hasFolded: false,
         cannotBeBaron: false
@@ -86,4 +122,9 @@ export async function joinGame(channelId: string, userId: string): Promise<boole
 
     await saveDropState(channelId, state);
     return true;
+}
+
+export async function destroyGame(channelId: string): Promise<void> {
+    // Wiping the state to null sends all connected clients back to the LobbyView
+    await setState(STATE_KEY, null, { namespace: channelId });
 }

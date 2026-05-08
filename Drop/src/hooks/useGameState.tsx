@@ -65,9 +65,9 @@ export function useGameState() {
 }
 
 /**
- * FIX 5: Resolve Discord display names for a list of user IDs.
+ * Resolve Discord display names for a list of user IDs.
  * Uses the Discord SDK's getInstanceConnectedParticipants for users in the current
- * activity, falling back to the session username for the current user.
+ * activity, prioritizing server nicknames, then global names, then base usernames.
  */
 async function fetchNames(
     userIds: string[],
@@ -84,18 +84,17 @@ async function fetchNames(
         const participants = await discordSdk.commands.getInstanceConnectedParticipants();
         if (participants?.participants) {
             for (const p of participants.participants) {
-                if (p.id && (p.username || p.global_name)) {
-                    resolved[p.id] = p.global_name || p.username;
+                if (p.id) {
+                    resolved[p.id] = p.nickname || p.global_name || p.username;
                 }
             }
         }
     } catch {
-        // Activity participant list not available (e.g. in mock/dev mode)
     }
 
     // Always include the current user's own name from session
-    if (session?.user?.id && session?.user?.username) {
-        resolved[session.user.id] = session.user.username;
+    if (session?.user?.id && !resolved[session.user.id]) {
+        resolved[session.user.id] = session.user.global_name || session.user.username;
     }
 
     // For any still-unresolved IDs, use a short fallback
