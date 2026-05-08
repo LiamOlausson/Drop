@@ -19,7 +19,7 @@ function getActivePlayers(state: DropGameState): string[] {
  */
 function advanceTurn(state: DropGameState): boolean {
     const activePlayers = getActivePlayers(state);
-    if (activePlayers.length === 0) return true;
+    if (activePlayers.length <= 1) return true;
 
     state.turnsInCurrentRound++;
 

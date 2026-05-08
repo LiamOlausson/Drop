@@ -18,6 +18,7 @@ export const ActiveGameView: React.FC<ActiveGameViewProps> = ({ gameState, userI
     const opponents = gameState.turnOrder.filter(id => id !== userId);
     const isSetup = gameState.phase === 'Setup';
     const isLeader = gameState.turnOrder[gameState.handLeaderIndex] === userId;
+    const isHost = gameState.turnOrder[0] === userId;
 
     const getName = (id: string) => playerNames[id] || id.substring(0, 10) + '…';
 
@@ -41,15 +42,34 @@ export const ActiveGameView: React.FC<ActiveGameViewProps> = ({ gameState, userI
                 flexShrink: 0,
                 zIndex: 10,
             }}>
-                <span style={{
-                    fontFamily: 'Cinzel, serif', fontSize: 20, fontWeight: 900,
-                    color: '#f0c040', letterSpacing: 4,
-                    textShadow: '0 0 20px rgba(240,192,64,0.2)',
-                }}>DROP</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <span style={{
+                        fontFamily: 'Cinzel, serif', fontSize: 20, fontWeight: 900,
+                        color: '#f0c040', letterSpacing: 4,
+                        textShadow: '0 0 20px rgba(240,192,64,0.2)',
+                    }}>DROP</span>
+
+                    {/* ADD THIS: Reset Lobby Dev Tool for the Host */}
+                    {isHost && (
+                        <button
+                            onClick={() => executeAction('Initialize')}
+                            style={{
+                                background: 'rgba(139,26,26,0.2)', border: '1px solid rgba(192,57,43,0.5)',
+                                color: '#e05050', fontSize: 10, fontFamily: 'Cinzel, serif',
+                                padding: '4px 8px', borderRadius: 4, cursor: 'pointer',
+                                textTransform: 'uppercase', letterSpacing: 1
+                            }}
+                        >
+                            Reset Lobby
+                        </button>
+                    )}
+                </div>
+
                 <span style={{
                     fontFamily: 'Crimson Pro, serif', fontStyle: 'italic',
                     fontSize: 13, color: 'rgba(201,173,135,0.4)', letterSpacing: 1,
                 }}>Round {gameState.roundNumber} · {gameState.phase}</span>
+
                 <div style={{
                     fontFamily: 'Cinzel, serif', fontSize: 12,
                     color: 'rgba(240,192,64,0.5)',
