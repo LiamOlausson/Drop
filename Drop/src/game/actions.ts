@@ -23,24 +23,39 @@ function advanceTurn(state: DropGameState): boolean {
 
     state.turnsInCurrentRound++;
 
+    // --- Round boundary: every active player has acted once ---
     if (state.turnsInCurrentRound >= activePlayers.length) {
         state.turnsInCurrentRound = 0;
 
         if (state.phase === 'The Climb') {
             state.climbRoundCount++;
+
             if (state.climbRoundCount >= 2) {
+                // Two full Climb rounds done → enter Battle phase
                 state.phase = 'Battle';
                 state.climbRoundCount = 0;
+
+                // Reset turn to the hand leader for the Battle round
                 state.currentTurnIndex = state.handLeaderIndex;
+
+                // FIX: Ensure the leader is actually active before starting the Battle Phase
+                while (
+                    state.players[state.turnOrder[state.currentTurnIndex]].isDead ||
+                    state.players[state.turnOrder[state.currentTurnIndex]].hasFolded
+                    ) {
+                    state.currentTurnIndex = (state.currentTurnIndex + 1) % state.turnOrder.length;
+                }
+
                 return false;
             }
         } else if (state.phase === 'Battle') {
+            // One Battle round done → go straight to Judgement
             state.phase = 'Judgement';
-            return true;
+            return true; // signal caller to score
         }
     }
 
-    // Advance to next active player
+    // Advance to next active player (skip dead / folded)
     do {
         state.currentTurnIndex = (state.currentTurnIndex + 1) % state.turnOrder.length;
     } while (
@@ -209,18 +224,37 @@ export async function startNewRound(channelId: string): Promise<boolean> {
 
 export async function startHand(channelId: string, anteAmount: number): Promise<boolean> {
     const state = await getDropState(channelId);
-    if (!state || state.phase !== 'Setup') return false;
+    if (!state) return false;
 
-    // Validate all players can afford the ante
-    for (const playerId of state.turnOrder) {
-        if (state.players[playerId].balance < anteAmount) return false;
+    // Allow starting from Setup OR Judgement (for consecutive rounds)
+    if (state.phase !== 'Setup' && state.phase !== 'Judgement') return false;
+
+    // If restarting from Judgement, prepare the board for the next hand
+    if (state.phase === 'Judgement') {
+        state.drawPile = getShuffledDeck();
+
+        // Rule: Keep only the top card from the past hand for discard and fallen piles
+        const lastDiscard = state.discardPile.pop();
+        const lastFallen = state.fallenPile.pop();
+        state.discardPile = lastDiscard ? [lastDiscard] : [];
+        state.fallenPile = lastFallen ? [lastFallen] : [];
+
+        // The Leader rotates clockwise after the end of each hand
+        state.handLeaderIndex = (state.handLeaderIndex + 1) % state.turnOrder.length;
+
+        // Clean up any lingering pending states
+        state.pendingAscend = undefined;
+        state.pendingSmuggle = undefined;
     }
 
+    // Revive players and collect ante
     for (const playerId of state.turnOrder) {
         const player = state.players[playerId];
-        player.balance  -= anteAmount;
-        player.antePaid += anteAmount;
-        state.pot       += anteAmount;
+        player.isDead = false;
+        player.hasFolded = false;
+        player.antePaid = anteAmount; // Reset their paid ante tracker to the base amount
+
+        state.pot += anteAmount;
     }
     state.currentAnteToCall = anteAmount;
 
@@ -229,15 +263,22 @@ export async function startHand(channelId: string, anteAmount: number): Promise<
         state.players[playerId].hand = state.drawPile.splice(0, 3);
     }
 
-    // Seed piles
-    if (state.drawPile.length >= 2) {
-        state.discardPile.push(state.drawPile.shift()!);
-        state.fallenPile.push(state.drawPile.shift()!);
+    // Seed discard and fallen piles ONLY if they are empty (i.e. first hand from Setup)
+    if (state.discardPile.length === 0) state.discardPile.push(state.drawPile.shift()!);
+    if (state.fallenPile.length === 0) state.fallenPile.push(state.drawPile.shift()!);
+
+    state.phase = 'The Climb';
+    state.currentTurnIndex = state.handLeaderIndex;
+
+    // Ensure the starting player isn't somehow dead/folded (extreme edge case)
+    while (
+        state.players[state.turnOrder[state.currentTurnIndex]].isDead ||
+        state.players[state.turnOrder[state.currentTurnIndex]].hasFolded
+        ) {
+        state.currentTurnIndex = (state.currentTurnIndex + 1) % state.turnOrder.length;
     }
 
-    state.phase               = 'The Climb';
-    state.currentTurnIndex    = state.handLeaderIndex;
-    state.climbRoundCount     = 0;
+    state.climbRoundCount = 0;
     state.turnsInCurrentRound = 0;
 
     await saveDropState(channelId, state);
