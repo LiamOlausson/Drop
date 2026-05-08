@@ -1,5 +1,5 @@
 // src/app/views/JudgementView.tsx
-import React from 'react';
+import React, { useState } from 'react';
 import { Card } from '../components/Card';
 import type { DropGameState } from '../../game/types';
 
@@ -20,6 +20,7 @@ export const JudgementView: React.FC<JudgementViewProps> = ({ gameState, userId,
     const myResult = gameState.players[userId]?.handResult;
     const myCfg    = myResult ? RESULT_STYLE[myResult] : null;
     const getName  = (id: string) => playerNames[id] || id.substring(0, 10) + '…';
+    const [anteAmount, setAnteAmount] = useState<number>(10);
 
     return (
         // FIX 7: viewport-locked, inner content scrolls
@@ -150,34 +151,53 @@ export const JudgementView: React.FC<JudgementViewProps> = ({ gameState, userId,
                 )}
 
                 {/* Action buttons */}
-                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center', paddingTop: 4 }}>
-                    <button
-                        onClick={() => executeAction('StartHand', { anteAmount: 10 })}
-                        style={{
-                            padding: '10px 28px',
-                            background: 'rgba(240,192,64,0.12)',
-                            border: '1px solid rgba(240,192,64,0.4)',
-                            borderRadius: 7, fontFamily: 'Cinzel, serif',
-                            fontSize: 13, fontWeight: 700, letterSpacing: 1,
-                            color: '#f0c040', cursor: 'pointer', transition: 'all 0.2s ease',
-                        }}
-                        onMouseOver={e => { e.currentTarget.style.background = 'rgba(240,192,64,0.22)'; }}
-                        onMouseOut={e  => { e.currentTarget.style.background = 'rgba(240,192,64,0.12)'; }}
-                    >🃏 Deal Next Hand</button>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16, alignItems: 'center', paddingTop: 4 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontFamily: 'Cinzel, serif', fontSize: 12, color: '#c9ad87', textTransform: 'uppercase' }}>Next Ante:</span>
+                        <input
+                            type="number"
+                            value={anteAmount}
+                            min={1}
+                            onChange={e => setAnteAmount(parseInt(e.target.value) || 1)}
+                            style={{
+                                width: 70, textAlign: 'center',
+                                background: 'rgba(26,20,16,0.8)', border: '1px solid rgba(240,192,64,0.4)',
+                                color: '#f0c040', borderRadius: 4, padding: '6px 8px',
+                                fontFamily: 'Cinzel, serif', outline: 'none'
+                            }}
+                        />
+                        <span style={{ fontFamily: 'Crimson Pro, serif', color: '#f0c040', fontSize: 16 }}>🪙</span>
+                    </div>
 
-                    <button
-                        onClick={() => executeAction('Initialize')}
-                        style={{
-                            padding: '10px 28px',
-                            background: 'rgba(26,20,16,0.8)',
-                            border: '1px solid rgba(60,46,30,0.8)',
-                            borderRadius: 7, fontFamily: 'Cinzel, serif',
-                            fontSize: 13, fontWeight: 600, letterSpacing: 1,
-                            color: 'rgba(201,173,135,0.5)', cursor: 'pointer', transition: 'all 0.2s ease',
-                        }}
-                        onMouseOver={e => { e.currentTarget.style.color = '#c9ad87'; }}
-                        onMouseOut={e  => { e.currentTarget.style.color = 'rgba(201,173,135,0.5)'; }}
-                    >← Return to Lobby</button>
+                    <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
+                        <button
+                            onClick={() => executeAction('StartHand', { anteAmount })}
+                            style={{
+                                padding: '10px 28px',
+                                background: 'rgba(240,192,64,0.12)',
+                                border: '1px solid rgba(240,192,64,0.4)',
+                                borderRadius: 7, fontFamily: 'Cinzel, serif',
+                                fontSize: 13, fontWeight: 700, letterSpacing: 1,
+                                color: '#f0c040', cursor: 'pointer', transition: 'all 0.2s ease',
+                            }}
+                            onMouseOver={e => { e.currentTarget.style.background = 'rgba(240,192,64,0.22)'; }}
+                            onMouseOut={e  => { e.currentTarget.style.background = 'rgba(240,192,64,0.12)'; }}
+                        >🃏 Deal Next Hand</button>
+
+                        <button
+                            onClick={() => executeAction('Initialize')}
+                            style={{
+                                padding: '10px 28px',
+                                background: 'rgba(26,20,16,0.8)',
+                                border: '1px solid rgba(60,46,30,0.8)',
+                                borderRadius: 7, fontFamily: 'Cinzel, serif',
+                                fontSize: 13, fontWeight: 600, letterSpacing: 1,
+                                color: 'rgba(201,173,135,0.5)', cursor: 'pointer', transition: 'all 0.2s ease',
+                            }}
+                            onMouseOver={e => { e.currentTarget.style.color = '#c9ad87'; }}
+                            onMouseOut={e  => { e.currentTarget.style.color = 'rgba(201,173,135,0.5)'; }}
+                        >← Return to Lobby</button>
+                    </div>
                 </div>
             </div>
         </div>

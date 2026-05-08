@@ -1,5 +1,5 @@
 // src/app/views/ActiveGameView.tsx
-import React from 'react';
+import React, { useState } from 'react';
 import { GameBoard } from '../components/GameBoard';
 import { PlayerHand } from '../components/PlayerHand';
 import { ActionMenu } from '../components/ActionMenu';
@@ -19,6 +19,7 @@ export const ActiveGameView: React.FC<ActiveGameViewProps> = ({ gameState, userI
     const isSetup = gameState.phase === 'Setup';
     const isLeader = gameState.turnOrder[gameState.handLeaderIndex] === userId;
     const isHost = gameState.turnOrder[0] === userId;
+    const [anteAmount, setAnteAmount] = useState<number>(10);
 
     const getName = (id: string) => playerNames[id] || id.substring(0, 10) + '…';
 
@@ -139,13 +140,31 @@ export const ActiveGameView: React.FC<ActiveGameViewProps> = ({ gameState, userI
                                     </button>
                                 )}
                                 {isPlayerInGame && isLeader && gameState.turnOrder.length >= 1 && (
-                                    <button
-                                        onClick={() => executeAction('StartHand', { anteAmount: 10 })}
-                                        disabled={!!(myPlayer && myPlayer.balance < 10)}
-                                        style={setupBtnStyle('#6abf6a', 'rgba(74,122,74,0.12)')}
-                                    >
-                                        🃏 Deal the Cards (Ante: 10 🪙)
-                                    </button>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'center' }}>
+                                            <span style={{ fontFamily: 'Cinzel, serif', fontSize: 11, color: '#c9ad87', textTransform: 'uppercase' }}>Base Ante:</span>
+                                            <input
+                                                type="number"
+                                                value={anteAmount}
+                                                min={1}
+                                                onChange={e => setAnteAmount(parseInt(e.target.value) || 1)}
+                                                style={{
+                                                    width: 60, textAlign: 'center',
+                                                    background: 'rgba(26,20,16,0.8)', border: '1px solid rgba(240,192,64,0.4)',
+                                                    color: '#f0c040', borderRadius: 4, padding: '4px 8px',
+                                                    fontFamily: 'Cinzel, serif', outline: 'none'
+                                                }}
+                                            />
+                                            <span style={{ fontFamily: 'Crimson Pro, serif', color: '#f0c040' }}>🪙</span>
+                                        </div>
+                                        <button
+                                            onClick={() => executeAction('StartHand', { anteAmount })}
+                                            disabled={!!(myPlayer && myPlayer.balance < anteAmount)}
+                                            style={setupBtnStyle('#6abf6a', 'rgba(74,122,74,0.12)')}
+                                        >
+                                            🃏 Deal the Cards
+                                        </button>
+                                    </div>
                                 )}
                                 {isPlayerInGame && !isLeader && (
                                     <p style={{
@@ -156,9 +175,11 @@ export const ActiveGameView: React.FC<ActiveGameViewProps> = ({ gameState, userI
                                     </p>
                                 )}
                             </div>
-                            {myPlayer && myPlayer.balance < 10 && (
+
+                            {/* UPDATE the warning to reference the new dynamic anteAmount */}
+                            {myPlayer && myPlayer.balance < anteAmount && (
                                 <p style={{ fontFamily: 'Crimson Pro, serif', fontStyle: 'italic', fontSize: 13, color: '#c05050', marginTop: 10 }}>
-                                    ⚠ Not enough coin to ante (need 10 🪙)
+                                    ⚠ Not enough coin to ante (need {anteAmount} 🪙)
                                 </p>
                             )}
                         </div>
