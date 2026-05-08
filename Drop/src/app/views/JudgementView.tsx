@@ -6,6 +6,7 @@ import type { DropGameState } from '../../game/types';
 interface JudgementViewProps {
     gameState: DropGameState;
     userId: string;
+    playerNames: Record<string, string>;
     executeAction: (action: any, payload?: any) => void;
 }
 
@@ -15,184 +16,170 @@ const RESULT_STYLE = {
     Dead:     { icon: '✝', label: 'Dead',     color: '#6b5e5e', bg: 'rgba(26,20,16,0.8)',      border: 'rgba(60,46,30,0.4)' },
 };
 
-export const JudgementView: React.FC<JudgementViewProps> = ({ gameState, userId, executeAction }) => {
+export const JudgementView: React.FC<JudgementViewProps> = ({ gameState, userId, playerNames, executeAction }) => {
     const myResult = gameState.players[userId]?.handResult;
-    const myCfg = myResult ? RESULT_STYLE[myResult] : null;
+    const myCfg    = myResult ? RESULT_STYLE[myResult] : null;
+    const getName  = (id: string) => playerNames[id] || id.substring(0, 10) + '…';
 
     return (
+        // FIX 7: viewport-locked, inner content scrolls
         <div style={{
-            display: 'flex', flexDirection: 'column', alignItems: 'center',
-            gap: 24, width: '100%', maxWidth: 900, padding: '32px 16px',
-            position: 'relative', zIndex: 1,
-            animation: 'fadeUp 0.5s ease-out forwards',
+            position: 'fixed', inset: 0,
+            display: 'flex', flexDirection: 'column',
+            overflow: 'hidden', zIndex: 1,
         }}>
-
-            {/* Title */}
-            <div style={{ textAlign: 'center' }}>
+            {/* Header */}
+            <div style={{
+                flexShrink: 0, textAlign: 'center',
+                padding: '16px 20px 10px',
+                borderBottom: '1px solid rgba(240,192,64,0.12)',
+                background: 'rgba(13,10,7,0.85)',
+            }}>
                 <p style={{
                     fontFamily: 'IM Fell English, serif', fontStyle: 'italic',
-                    fontSize: 13, letterSpacing: 4, color: 'rgba(201,173,135,0.4)',
-                    textTransform: 'uppercase', marginBottom: 8,
+                    fontSize: 11, letterSpacing: 4, color: 'rgba(201,173,135,0.4)',
+                    textTransform: 'uppercase', marginBottom: 4,
                 }}>The Cards are Laid Bare</p>
                 <h1 style={{
                     fontFamily: 'Cinzel, serif', fontWeight: 900,
-                    fontSize: 42, letterSpacing: 4,
-                    color: '#f0c040',
-                    textShadow: '0 0 40px rgba(240,192,64,0.3)',
-                    margin: 0,
+                    fontSize: 32, letterSpacing: 4, color: '#f0c040',
+                    textShadow: '0 0 30px rgba(240,192,64,0.3)', margin: 0,
                 }}>Judgement</h1>
             </div>
 
-            {/* Your personal result */}
-            {myCfg && (
-                <div style={{
-                    background: myCfg.bg, border: `2px solid ${myCfg.border}`,
-                    borderRadius: 12, padding: '16px 40px',
-                    textAlign: 'center',
-                    boxShadow: `0 0 30px ${myCfg.bg}, 0 4px 16px rgba(0,0,0,0.5)`,
-                    animation: 'pulse-glow 2s ease-in-out infinite',
-                }}>
-                    <div style={{ fontSize: 36, marginBottom: 4 }}>{myCfg.icon}</div>
+            {/* Scrollable content area */}
+            <div style={{
+                flex: 1, overflowY: 'auto',
+                display: 'flex', flexDirection: 'column', alignItems: 'center',
+                gap: 16, padding: '16px 20px 20px',
+            }}>
+
+                {/* Your result banner */}
+                {myCfg && (
                     <div style={{
-                        fontFamily: 'Cinzel, serif', fontWeight: 900, fontSize: 24,
-                        color: myCfg.color, letterSpacing: 2,
-                    }}>You are the {myCfg.label}</div>
-                    {myResult === 'Baron' && (
-                        <p style={{ fontFamily: 'Crimson Pro, serif', fontStyle: 'italic', fontSize: 14, color: 'rgba(240,192,64,0.6)', marginTop: 4 }}>
-                            The highest hand claims the Sump.
-                        </p>
-                    )}
-                    {myResult === 'Survivor' && (
-                        <p style={{ fontFamily: 'Crimson Pro, serif', fontStyle: 'italic', fontSize: 14, color: 'rgba(106,191,106,0.6)', marginTop: 4 }}>
-                            The lowest hand slips away with their coin.
-                        </p>
-                    )}
-                    {myResult === 'Dead' && (
-                        <p style={{ fontFamily: 'Crimson Pro, serif', fontStyle: 'italic', fontSize: 14, color: 'rgba(107,94,94,0.6)', marginTop: 4 }}>
-                            Caught in the middle — everything to the Sump.
-                        </p>
-                    )}
+                        background: myCfg.bg, border: `2px solid ${myCfg.border}`,
+                        borderRadius: 10, padding: '12px 36px',
+                        textAlign: 'center',
+                        boxShadow: `0 0 24px ${myCfg.bg}, 0 4px 16px rgba(0,0,0,0.5)`,
+                        animation: 'pulse-glow 2s ease-in-out infinite',
+                        width: '100%', maxWidth: 400,
+                    }}>
+                        <div style={{ fontSize: 28, marginBottom: 2 }}>{myCfg.icon}</div>
+                        <div style={{
+                            fontFamily: 'Cinzel, serif', fontWeight: 900, fontSize: 20,
+                            color: myCfg.color, letterSpacing: 2,
+                        }}>You are the {myCfg.label}</div>
+                        {myResult === 'Baron' && (
+                            <p style={{ fontFamily: 'Crimson Pro, serif', fontStyle: 'italic', fontSize: 13, color: 'rgba(240,192,64,0.6)', marginTop: 3 }}>
+                                The highest hand claims the Sump.
+                            </p>
+                        )}
+                        {myResult === 'Survivor' && (
+                            <p style={{ fontFamily: 'Crimson Pro, serif', fontStyle: 'italic', fontSize: 13, color: 'rgba(106,191,106,0.6)', marginTop: 3 }}>
+                                The lowest hand slips away with their coin.
+                            </p>
+                        )}
+                        {myResult === 'Dead' && (
+                            <p style={{ fontFamily: 'Crimson Pro, serif', fontStyle: 'italic', fontSize: 13, color: 'rgba(107,94,94,0.6)', marginTop: 3 }}>
+                                Caught in the middle — everything to the Sump.
+                            </p>
+                        )}
+                    </div>
+                )}
+
+                {/* Divider */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', maxWidth: 500 }}>
+                    <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg, transparent, rgba(240,192,64,0.2))' }} />
+                    <span style={{ color: 'rgba(240,192,64,0.3)', fontFamily: 'serif', fontSize: 14 }}>♦</span>
+                    <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg, rgba(240,192,64,0.2), transparent)' }} />
                 </div>
-            )}
 
-            {/* Divider */}
-            <div style={{
-                display: 'flex', alignItems: 'center', gap: 16, width: '100%', maxWidth: 600,
-            }}>
-                <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg, transparent, rgba(240,192,64,0.2))' }} />
-                <span style={{ color: 'rgba(240,192,64,0.3)', fontFamily: 'serif', fontSize: 16 }}>♦</span>
-                <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg, rgba(240,192,64,0.2), transparent)' }} />
-            </div>
-
-            {/* All player results */}
-            <div style={{
-                display: 'flex', flexWrap: 'wrap', gap: 16, justifyContent: 'center', width: '100%',
-            }}>
-                {gameState.turnOrder.map(playerId => {
-                    const p = gameState.players[playerId];
-                    const res = p.handResult ? RESULT_STYLE[p.handResult] : RESULT_STYLE.Dead;
-                    const score = p.hand.reduce((s, c) => s + c.value, 0);
-                    const isYou = playerId === userId;
-
-                    return (
-                        <div key={playerId} style={{
-                            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
-                            padding: '16px 20px',
-                            background: res.bg, border: `1px solid ${res.border}`,
-                            borderRadius: 12, minWidth: 170,
-                            boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
-                        }}>
-                            {/* Player header */}
-                            <div style={{ textAlign: 'center' }}>
-                                <div style={{
-                                    fontFamily: 'Cinzel, serif', fontSize: 11, letterSpacing: 1,
-                                    color: isYou ? '#f0c040' : '#c9ad87', fontWeight: isYou ? 700 : 400,
-                                }}>
-                                    {res.icon} {playerId.substring(0, 12)}{isYou ? ' (You)' : ''}
-                                </div>
-                                <div style={{
-                                    fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 2,
-                                    color: res.color, textTransform: 'uppercase', marginTop: 3,
-                                }}>{res.label}</div>
-                            </div>
-
-                            {/* Cards — all revealed */}
-                            <div style={{ display: 'flex', gap: 6 }}>
-                                {p.hand.map(c => (
-                                    <Card key={c.id} card={c} size="sm" />
-                                ))}
-                            </div>
-
-                            {/* Score & balance */}
-                            <div style={{ textAlign: 'center' }}>
-                                <div style={{
-                                    fontFamily: 'Cinzel, serif', fontWeight: 900, fontSize: 22,
-                                    color: res.color, lineHeight: 1,
-                                }}>{score}</div>
-                                <div style={{
-                                    fontFamily: 'Crimson Pro, serif', fontStyle: 'italic',
-                                    fontSize: 12, color: 'rgba(201,173,135,0.5)',
-                                }}>pts</div>
-                            </div>
-
-                            <div style={{
-                                fontFamily: 'Crimson Pro, serif', fontSize: 13,
-                                color: 'rgba(201,173,135,0.6)',
-                            }}>
-                                🪙 {p.balance}
-                            </div>
-                        </div>
-                    );
-                })}
-            </div>
-
-            {/* Pot remaining */}
-            {gameState.pot > 0 && (
+                {/* All player results */}
                 <div style={{
-                    fontFamily: 'Crimson Pro, serif', fontStyle: 'italic',
-                    fontSize: 14, color: 'rgba(201,173,135,0.5)',
+                    display: 'flex', flexWrap: 'wrap', gap: 12,
+                    justifyContent: 'center', width: '100%',
                 }}>
-                    Remaining in Sump: <strong style={{ color: '#f0c040' }}>{gameState.pot} 🪙</strong>
+                    {gameState.turnOrder.map(playerId => {
+                        const p   = gameState.players[playerId];
+                        const res = p.handResult ? RESULT_STYLE[p.handResult] : RESULT_STYLE.Dead;
+                        const score = p.hand.reduce((s, c) => s + c.value, 0);
+                        const isYou = playerId === userId;
+
+                        return (
+                            <div key={playerId} style={{
+                                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
+                                padding: '12px 16px',
+                                background: res.bg, border: `1px solid ${res.border}`,
+                                borderRadius: 10, minWidth: 150,
+                                boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
+                            }}>
+                                <div style={{ textAlign: 'center' }}>
+                                    <div style={{
+                                        fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 0.5,
+                                        color: isYou ? '#f0c040' : '#c9ad87', fontWeight: isYou ? 700 : 400,
+                                    }}>
+                                        {res.icon} {getName(playerId)}{isYou ? ' (You)' : ''}
+                                    </div>
+                                    <div style={{
+                                        fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 2,
+                                        color: res.color, textTransform: 'uppercase', marginTop: 2,
+                                    }}>{res.label}</div>
+                                </div>
+                                <div style={{ display: 'flex', gap: 4 }}>
+                                    {p.hand.map(c => <Card key={c.id} card={c} size="sm" />)}
+                                </div>
+                                <div style={{ textAlign: 'center' }}>
+                                    <div style={{
+                                        fontFamily: 'Cinzel, serif', fontWeight: 900, fontSize: 20,
+                                        color: res.color, lineHeight: 1,
+                                    }}>{score}</div>
+                                    <div style={{ fontFamily: 'Crimson Pro, serif', fontStyle: 'italic', fontSize: 11, color: 'rgba(201,173,135,0.5)' }}>pts</div>
+                                </div>
+                                <div style={{ fontFamily: 'Crimson Pro, serif', fontSize: 12, color: 'rgba(201,173,135,0.6)' }}>
+                                    🪙 {p.balance}
+                                </div>
+                            </div>
+                        );
+                    })}
                 </div>
-            )}
 
-            {/* Action buttons */}
-            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', justifyContent: 'center', marginTop: 8 }}>
-                <button
-                    onClick={() => executeAction('StartHand', { anteAmount: 10 })}
-                    style={{
-                        padding: '12px 32px',
-                        background: 'rgba(240,192,64,0.12)',
-                        border: '1px solid rgba(240,192,64,0.4)',
-                        borderRadius: 7, fontFamily: 'Cinzel, serif',
-                        fontSize: 14, fontWeight: 700, letterSpacing: 1,
-                        color: '#f0c040', cursor: 'pointer',
-                        transition: 'all 0.2s ease',
-                    }}
-                    onMouseOver={e => { e.currentTarget.style.background = 'rgba(240,192,64,0.22)'; }}
-                    onMouseOut={e => { e.currentTarget.style.background = 'rgba(240,192,64,0.12)'; }}
-                >
-                    🃏 Deal Next Hand
-                </button>
+                {gameState.pot > 0 && (
+                    <div style={{ fontFamily: 'Crimson Pro, serif', fontStyle: 'italic', fontSize: 13, color: 'rgba(201,173,135,0.5)' }}>
+                        Remaining in Sump: <strong style={{ color: '#f0c040' }}>{gameState.pot} 🪙</strong>
+                    </div>
+                )}
 
-                <button
-                    onClick={() => executeAction('Initialize')}
-                    style={{
-                        padding: '12px 32px',
-                        background: 'rgba(26,20,16,0.8)',
-                        border: '1px solid rgba(60,46,30,0.8)',
-                        borderRadius: 7, fontFamily: 'Cinzel, serif',
-                        fontSize: 14, fontWeight: 600, letterSpacing: 1,
-                        color: 'rgba(201,173,135,0.5)', cursor: 'pointer',
-                        transition: 'all 0.2s ease',
-                    }}
-                    onMouseOver={e => { e.currentTarget.style.color = '#c9ad87'; }}
-                    onMouseOut={e => { e.currentTarget.style.color = 'rgba(201,173,135,0.5)'; }}
-                >
-                    ← Return to Lobby
-                </button>
+                {/* Action buttons */}
+                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center', paddingTop: 4 }}>
+                    <button
+                        onClick={() => executeAction('StartHand', { anteAmount: 10 })}
+                        style={{
+                            padding: '10px 28px',
+                            background: 'rgba(240,192,64,0.12)',
+                            border: '1px solid rgba(240,192,64,0.4)',
+                            borderRadius: 7, fontFamily: 'Cinzel, serif',
+                            fontSize: 13, fontWeight: 700, letterSpacing: 1,
+                            color: '#f0c040', cursor: 'pointer', transition: 'all 0.2s ease',
+                        }}
+                        onMouseOver={e => { e.currentTarget.style.background = 'rgba(240,192,64,0.22)'; }}
+                        onMouseOut={e  => { e.currentTarget.style.background = 'rgba(240,192,64,0.12)'; }}
+                    >🃏 Deal Next Hand</button>
+
+                    <button
+                        onClick={() => executeAction('Initialize')}
+                        style={{
+                            padding: '10px 28px',
+                            background: 'rgba(26,20,16,0.8)',
+                            border: '1px solid rgba(60,46,30,0.8)',
+                            borderRadius: 7, fontFamily: 'Cinzel, serif',
+                            fontSize: 13, fontWeight: 600, letterSpacing: 1,
+                            color: 'rgba(201,173,135,0.5)', cursor: 'pointer', transition: 'all 0.2s ease',
+                        }}
+                        onMouseOver={e => { e.currentTarget.style.color = '#c9ad87'; }}
+                        onMouseOut={e  => { e.currentTarget.style.color = 'rgba(201,173,135,0.5)'; }}
+                    >← Return to Lobby</button>
+                </div>
             </div>
-
         </div>
     );
 };

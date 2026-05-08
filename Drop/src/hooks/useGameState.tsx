@@ -7,58 +7,45 @@ import type { DropGameState, ActionType } from '../game/types';
 export function useGameState() {
     const { authenticated, session, discordSdk } = useDiscordSdk();
     const channelId = discordSdk.channelId;
-    const userId = session?.user?.id;
+    const userId    = session?.user?.id;
 
-    // Local React state to hold the authoritative game board
-    const [gameState, setGameState] = useState<DropGameState | null>(null);
+    const [gameState, setGameState]     = useState<DropGameState | null>(null);
+    const [playerNames, setPlayerNames] = useState<Record<string, string>>({});
 
-    // Real-time synchronization trigger via @robojs/sync
-    // The dependency array isolates this websocket room to the specific Discord Channel
     const [syncTick, setSyncTick] = useSyncState<number>(0, ['drop-game-sync', channelId]);
 
-    // Fetch the authoritative state from the secure backend
     const fetchState = useCallback(async () => {
         if (!channelId || !authenticated) return;
         try {
             const response = await fetch(`/api/game/state?channelId=${channelId}`);
             if (response.ok) {
-                const data = await response.json();
+                const data: DropGameState = await response.json();
                 setGameState(data);
+                fetchNames(data.turnOrder, discordSdk, session, setPlayerNames);
             } else if (response.status === 404) {
-                setGameState(null); // No game active in this channel yet
+                setGameState(null);
             }
         } catch (error) {
-            console.error("Failed to fetch game state:", error);
+            console.error('Failed to fetch game state:', error);
         }
     }, [channelId, authenticated]);
 
-    // Listen for websocket updates: Re-fetch whenever the syncTick is updated by any client
     useEffect(() => {
         fetchState();
     }, [syncTick, fetchState]);
 
-    // Dispatch an action to the backend API
     const executeAction = useCallback(async (
         action: ActionType | 'PassSmuggle' | 'ChallengeSmuggle' | 'RespondAscend' | 'Initialize' | 'Join' | 'StartHand',
         payload?: any
     ) => {
         if (!channelId || !userId) return;
-
         try {
             const response = await fetch('/api/game/action', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    channelId,
-                    userId,
-                    action,
-                    payload
-                })
+                body: JSON.stringify({ channelId, userId, action, payload })
             });
-
             if (response.ok) {
-                // If the action succeeded on the backend, update the global sync tick.
-                // This instantly notifies all other players' websockets to refresh their screens!
                 setSyncTick(Date.now());
             } else {
                 console.warn(`Action ${action} rejected by server.`);
@@ -71,7 +58,52 @@ export function useGameState() {
     return {
         gameState,
         userId,
+        playerNames,
         executeAction,
         isReady: authenticated && channelId != null
     };
+}
+
+/**
+ * FIX 5: Resolve Discord display names for a list of user IDs.
+ * Uses the Discord SDK's getInstanceConnectedParticipants for users in the current
+ * activity, falling back to the session username for the current user.
+ */
+async function fetchNames(
+    userIds: string[],
+    discordSdk: any,
+    session: any,
+    setPlayerNames: React.Dispatch<React.SetStateAction<Record<string, string>>>
+) {
+    if (!userIds || userIds.length === 0) return;
+
+    const resolved: Record<string, string> = {};
+
+    // Try to get participants from the current activity instance
+    try {
+        const participants = await discordSdk.commands.getInstanceConnectedParticipants();
+        if (participants?.participants) {
+            for (const p of participants.participants) {
+                if (p.id && (p.username || p.global_name)) {
+                    resolved[p.id] = p.global_name || p.username;
+                }
+            }
+        }
+    } catch {
+        // Activity participant list not available (e.g. in mock/dev mode)
+    }
+
+    // Always include the current user's own name from session
+    if (session?.user?.id && session?.user?.username) {
+        resolved[session.user.id] = session.user.username;
+    }
+
+    // For any still-unresolved IDs, use a short fallback
+    for (const id of userIds) {
+        if (!resolved[id]) {
+            resolved[id] = id.length > 8 ? id.substring(0, 8) + '…' : id;
+        }
+    }
+
+    setPlayerNames(prev => ({ ...prev, ...resolved }));
 }
