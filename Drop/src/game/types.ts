@@ -27,8 +27,18 @@ export interface PlayerState {
     id: string; // Discord User ID
     hand: Card[];
     antePaid: number; // Tracks how much this player has put into the pot this hand
+    balance: number;  // Running coin balance for this lobby session
     isDead: boolean; // True if eliminated via Hollow consequence or Opposing Barons Clause
     hasFolded: boolean; // True if they went to the bridge (folded) during an Ascend action
+    handResult?: 'Baron' | 'Survivor' | 'Dead'; // Result of the completed hand
+}
+
+/** Records the outcome of a single player at the end of a hand. */
+export interface HandResult {
+    playerId: string;
+    score: number;
+    result: 'Baron' | 'Survivor' | 'Dead';
+    coinsChanged: number; // Positive = coins gained, negative = lost (relative to ante paid)
 }
 
 /**
@@ -37,8 +47,8 @@ export interface PlayerState {
  */
 export type TurnPhase =
     | 'Setup'
-    | 'FeedingTheSump' // Phase 1: Ante collection
-    | 'TheClimb'       // Phase 2-3: 2 Rounds of standard actions
+    | 'Feeding The Sump' // Phase 1: Ante collection
+    | 'The Climb'       // Phase 2-3: 2 Rounds of standard actions
     | 'Battle'         // Phase 4: Final play round (Ascend only)
     | 'Judgement';     // Phase 5: Reveal and Scoring
 
@@ -87,6 +97,8 @@ export interface AscendChallengeState {
 export interface DropGameState {
     pot: number;
     currentAnteToCall: number; // The current highest bet that players must match to stay in
+    startingBalance: number;  // The initial balance each player gets when the lobby is created
+    roundNumber: number;      // Increments each hand
 
     // Turn Management
     turnOrder: string[];
@@ -105,6 +117,7 @@ export interface DropGameState {
 
     // Game Flow
     phase: TurnPhase;
+    handResults?: HandResult[]; // Populated after Judgement; cleared at start of next hand
     pendingSmuggle?: SmuggleChallengeState;
     pendingAscend?: AscendChallengeState;
 }

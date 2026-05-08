@@ -4,6 +4,7 @@ import type { DropGameState } from './types';
 import { getShuffledDeck } from './deck';
 
 const STATE_KEY = 'drop-game-state';
+const DEFAULT_STARTING_BALANCE = 500;
 
 /**
  * Initializes a fresh game of Drop for a specific Discord channel.
@@ -16,12 +17,14 @@ export async function initializeGame(channelId: string): Promise<DropGameState> 
     const initialState: DropGameState = {
         pot: 0,
         currentAnteToCall: 0,
+        startingBalance: DEFAULT_STARTING_BALANCE,
+        roundNumber: 1,
 
         turnOrder: [],
         currentTurnIndex: 0,
         handLeaderIndex: 0,
         climbRoundCount: 0,
-        turnsInCurrentRound: 0,   // NEW: tracks when a full round completes
+        turnsInCurrentRound: 0,
 
         players: {},
 
@@ -35,6 +38,7 @@ export async function initializeGame(channelId: string): Promise<DropGameState> 
     await setState(STATE_KEY, initialState, { namespace: channelId });
     return initialState;
 }
+
 
 
 /**
@@ -74,6 +78,7 @@ export async function joinGame(channelId: string, userId: string): Promise<boole
         id: userId,
         hand: [],
         antePaid: 0,
+        balance: state.startingBalance,
         isDead: false,
         hasFolded: false
     };

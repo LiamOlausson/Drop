@@ -23,7 +23,6 @@ export default async (req: RoboRequest) => {
     let success = false;
 
     try {
-        // Route the requested action to the correct game engine function
         switch (action) {
             case 'Initialize':
                 await initializeGame(channelId);
@@ -39,11 +38,10 @@ export default async (req: RoboRequest) => {
                 success = await performScavenge(channelId, userId, payload.cardId, payload.source);
                 break;
             case 'Dive':
-                // Note: The UI needs a submenu to select 2 discardIds to fully pass this payload
                 success = await performDive(channelId, userId, payload?.discardIds || []);
                 break;
             case 'Ascend':
-                success = await performAscend(channelId, userId, payload?.raiseAmount || 5);
+                success = await performAscend(channelId, userId, payload?.raiseAmount ?? 5);
                 break;
             case 'RespondAscend':
                 success = await respondToAscend(channelId, userId, payload.response);

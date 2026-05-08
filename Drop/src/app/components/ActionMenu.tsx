@@ -91,8 +91,8 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({ gameState, playerId, onA
     // -----------------------------------------------------------------------
     // 2. NOT YOUR TURN
     // -----------------------------------------------------------------------
-    if (!isMyTurn || (gameState.phase !== 'TheClimb' && gameState.phase !== 'Battle')) {
-        if (gameState.phase === 'Setup' || gameState.phase === 'FeedingTheSump')
+    if (!isMyTurn || (gameState.phase !== 'The Climb' && gameState.phase !== 'Battle')) {
+        if (gameState.phase === 'Setup' || gameState.phase === 'Feeding The Sump')
             return <MenuBox>Waiting for hand to start…</MenuBox>;
         if (gameState.phase === 'Judgement')
             return <MenuBox>Judgement Phase! Calculating scores…</MenuBox>;
