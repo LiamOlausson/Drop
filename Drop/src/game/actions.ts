@@ -1,7 +1,7 @@
 // src/game/actions.ts
 import { getDropState, saveDropState } from './state';
 import { getShuffledDeck } from './deck';
-import type { CardRank, DropGameState, HandResult } from './types';
+import type {CardRank, DropGameState, HandResult, PlayerState} from './types';
 
 // ---------------------------------------------------------------------------
 // PHASE TRANSITION HELPERS
@@ -74,82 +74,98 @@ function evaluateJudgementSync(state: DropGameState): void {
     for (const id of state.turnOrder) {
         const p = state.players[id];
         if (p.isDead || p.hasFolded) continue;
+
         const baronNames = new Set(
             p.hand.filter(c => c.rank === 'Baron').map(c => c.name)
         );
         if (baronNames.size >= 2) {
-            p.isDead = true;
+            p.isDead = true; // Caught in the Baron's war
         }
     }
 
-    // 2. Collect active players and score
-    const active = state.turnOrder
-        .map(id => state.players[id])
-        .filter(p => !p.isDead && !p.hasFolded);
-
+    // 2. Strictly separate dead/folded players from active players
+    const active: PlayerState[] = [];
     for (const id of state.turnOrder) {
         const p = state.players[id];
+
+        // If they are dead or folded, immediately assign 'Dead' and exclude them
         if (p.isDead || p.hasFolded) {
             p.handResult = 'Dead';
             results.push({
                 playerId: id,
-                score: p.hand.reduce((s, c) => s + c.value, 0),
+                score: p.hand.reduce((s, c) => s + (c.value || 0), 0),
                 result: 'Dead',
                 coinsChanged: -p.antePaid
             });
+        } else {
+            active.push(p);
         }
     }
 
+    // If everyone is dead, end calculation early
     if (active.length === 0) {
         state.handResults = results;
         return;
     }
 
+    // 3. Map strictly active players to their scores
     const scored = active.map(p => ({
         player: p,
-        score: p.hand.reduce((s, c) => s + c.value, 0)
+        score: p.hand.reduce((s, c) => s + (c.value || 0), 0)
     }));
 
-    const highScore = Math.max(...scored.map(s => s.score));
-    const lowScore  = Math.min(...scored.map(s => s.score));
+    // 4. Calculate High and Low Scores securely
+    // Filter out Glow Worm penalty players so they don't skew the high score
+    const baronCandidates = scored.filter(s => !s.player.cannotBeBaron);
+    const highScore = baronCandidates.length > 0
+        ? Math.max(...baronCandidates.map(s => s.score))
+        : -Infinity;
 
-    const barons    = scored.filter(s => s.score === highScore);
-    const survivors = highScore !== lowScore
+    // Low score still considers all active players
+    const lowScore = Math.min(...scored.map(s => s.score));
+
+    // 5. Categorize players based on the secured scores
+    const barons = baronCandidates.filter(s => s.score === highScore);
+
+    // A survivor only exists if there is a distinct difference between high and low score
+    const survivors = (highScore !== lowScore && scored.length > 1)
         ? scored.filter(s => s.score === lowScore)
         : [];
-    const middle    = scored.filter(s => s.score !== highScore && s.score !== lowScore);
 
-    for (const { player } of survivors) {
+    const middle = scored.filter(s => !barons.includes(s) && !survivors.includes(s));
+
+    // 6. Apply payouts and final results
+    for (const { player, score } of survivors) {
         const reclaimed = Math.min(player.antePaid, state.pot);
         player.balance      += reclaimed;
         player.handResult    = 'Survivor';
         state.pot            = Math.max(0, state.pot - reclaimed);
         results.push({
             playerId: player.id,
-            score: player.hand.reduce((s, c) => s + c.value, 0),
+            score: score,
             result: 'Survivor',
             coinsChanged: reclaimed - player.antePaid
         });
     }
 
     const potShare = barons.length > 0 ? Math.floor(state.pot / barons.length) : 0;
-    for (const { player } of barons) {
+    for (const { player, score } of barons) {
         player.balance   += potShare;
         player.handResult = 'Baron';
         results.push({
             playerId: player.id,
-            score: player.hand.reduce((s, c) => s + c.value, 0),
+            score: score,
             result: 'Baron',
             coinsChanged: potShare - player.antePaid
         });
     }
-    state.pot = state.pot - potShare * barons.length;
+    state.pot = Math.max(0, state.pot - (potShare * barons.length));
 
-    for (const { player } of middle) {
+    for (const { player, score } of middle) {
         player.handResult = 'Dead';
         results.push({
             playerId: player.id,
-            score: player.hand.reduce((s, c) => s + c.value, 0),
+            score: score,
             result: 'Dead',
             coinsChanged: -player.antePaid
         });
@@ -187,6 +203,7 @@ export async function startHand(channelId: string, anteAmount: number): Promise<
         const player = state.players[playerId];
         player.isDead      = false;
         player.hasFolded   = false;
+        player.cannotBeBaron = false;
         player.antePaid    = anteAmount;
         player.hand        = [];
         player.handResult  = undefined; // <-- clear previous round result
@@ -509,43 +526,66 @@ async function resolveSmuggle(state: DropGameState, challengerId?: string) {
     const smuggle  = state.pendingSmuggle!;
     const smuggler = state.players[smuggle.smugglerId];
 
+    // 1. The smuggler ALWAYS gets the drawn card to replace their dropped card
     smuggler.hand.push(smuggle.drawnCard);
 
     if (challengerId) {
-        const accuser   = state.players[challengerId];
+        const accuser = state.players[challengerId];
+
+        // 2. Evaluate if the smuggler told the truth
         const toldTruth = smuggle.actualCard.rank === smuggle.declaredRank;
 
+        // 3. The challenged card is revealed to the table and goes to the discard pile
         state.discardPile.push({ ...smuggle.actualCard, isRevealed: true });
 
+        // 4. BI-DIRECTIONAL LOGIC: Determine the loser and winner of the challenge
+        // If the smuggler told the truth, the accuser loses. If the smuggler lied, the smuggler loses.
         const loser = toldTruth ? accuser : smuggler;
+        const winner = toldTruth ? smuggler : accuser;
 
+        // 5. The LOSER suffers the consequence of the ACTUAL dropped card's rank
         switch (smuggle.actualCard.rank) {
             case 'Baron':
+                // Loser matches the current value of the pot
                 loser.balance  -= state.pot;
                 loser.antePaid += state.pot;
                 state.pot      *= 2;
                 break;
-            case 'Warden':
+            case 'Warden': {
+                // Loser must discard all baron cards in their hand then redraw
+                const barons = loser.hand.filter(c => c.rank === 'Baron');
                 loser.hand = loser.hand.filter(c => c.rank !== 'Baron');
+                state.discardPile.push(...barons.map(c => ({ ...c, isRevealed: true })));
+
+                // Redraw to replace the discarded barons
+                for (let i = 0; i < barons.length; i++) {
+                    if (state.drawPile.length > 0) {
+                        loser.hand.push(state.drawPile.shift()!);
+                    }
+                }
                 break;
+            }
             case 'Citizen': {
-                const winner  = toldTruth ? smuggler : accuser;
-                const payment = Math.min(loser.balance, state.currentAnteToCall);
+                // Loser pays an ante directly to the winner
+                // Using 10 as the standard base ante
+                const payment = Math.min(loser.balance, 10);
                 loser.balance   -= payment;
                 winner.balance  += payment;
                 break;
             }
             case 'Glow Worm':
-                loser.isDead = true;
+                loser.cannotBeBaron = true;
                 break;
             case 'Hollow':
                 loser.isDead = true;
                 break;
         }
     } else {
+        // Unchallenged: card goes face down to the fallen pile
         state.fallenPile.push(smuggle.actualCard);
     }
 
+    // Clean up pending state and advance turn
     state.pendingSmuggle = undefined;
 
     const judge = advanceTurn(state);

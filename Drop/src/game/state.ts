@@ -80,7 +80,8 @@ export async function joinGame(channelId: string, userId: string): Promise<boole
         antePaid: 0,
         balance: state.startingBalance,
         isDead: false,
-        hasFolded: false
+        hasFolded: false,
+        cannotBeBaron: false
     };
 
     await saveDropState(channelId, state);
