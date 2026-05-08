@@ -64,12 +64,18 @@ export async function getDropState(channelId: string): Promise<DropGameState | n
  * @param newState The modified DropGameState to save
  */
 export async function saveDropState(channelId: string, newState: DropGameState): Promise<void> {
-    // If tracking is enabled, persist every player's balance to Flashcore
+    // If tracking is enabled, persist every player's balance and name to Flashcore
     if (newState.playerTracking) {
         const savePromises = newState.turnOrder.map(playerId => {
             const player = newState.players[playerId];
             if (player) {
-                return Flashcore.set(`balance_${playerId}`, player.balance);
+                return Promise.all([
+                    Flashcore.set(`balance_${playerId}`, player.balance),
+                    // Only persist the name if tracking is enabled and one exists
+                    newState.assignedNames[playerId]
+                        ? Flashcore.set(`name_${playerId}`, newState.assignedNames[playerId])
+                        : Promise.resolve()
+                ]);
             }
             return Promise.resolve();
         });
@@ -85,7 +91,7 @@ export async function saveDropState(channelId: string, newState: DropGameState):
  * * @param channelId The Discord Channel ID
  * @param userId The Discord User ID of the player joining
  */
-export async function joinGame(channelId: string, userId: string): Promise<boolean> {
+export async function joinGame(channelId: string, userId: string, userName?: string): Promise<boolean> {
     const state = await getDropState(channelId);
     if (!state) return false;
     if (state.phase !== 'Setup') return false;
@@ -98,6 +104,14 @@ export async function joinGame(channelId: string, userId: string): Promise<boole
         const savedBalance = await Flashcore.get<number>(`balance_${userId}`);
         if (typeof savedBalance === 'number') {
             startingBalance = savedBalance;
+        }
+
+        // Track their Discord Name
+        const savedName = await Flashcore.get<string>(`name_${userId}`);
+        if (userName) {
+            state.assignedNames[userId] = userName;
+        } else if (savedName) {
+            state.assignedNames[userId] = savedName;
         }
     } else {
         // Assign a random thematic name to the player

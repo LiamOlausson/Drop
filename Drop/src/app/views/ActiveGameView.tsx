@@ -146,8 +146,12 @@ export const ActiveGameView: React.FC<ActiveGameViewProps> = ({ gameState, userI
                             </div>
 
                             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                                {/* Pass the resolved Discord name to the backend when joining */}
                                 {!isPlayerInGame && (
-                                    <button onClick={() => executeAction('Join')} style={setupBtnStyle('#f0c040', 'rgba(240,192,64,0.12)')}>
+                                    <button
+                                        onClick={() => executeAction('Join', { userName: playerNames[userId] })}
+                                        style={setupBtnStyle('#f0c040', 'rgba(240,192,64,0.12)')}
+                                    >
                                         ⚔ Sit Down
                                     </button>
                                 )}

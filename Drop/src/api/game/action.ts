@@ -25,8 +25,7 @@ export default async (req: RoboRequest) => {
     try {
         switch (action) {
             case 'Initialize':
-                // Check payload for the playerTracking preference, default to false
-                await initializeGame(channelId, payload?.playerTracking ?? false);
+                await initializeGame(channelId, userId, payload?.playerTracking ?? false);
                 success = true;
                 break;
             case 'ReturnToLobby':
@@ -44,7 +43,7 @@ export default async (req: RoboRequest) => {
                 }
                 break;
             case 'Join':
-                success = await joinGame(channelId, userId);
+                success = await joinGame(channelId, userId, payload?.userName);
                 break;
             case 'StartHand':
                 success = await startHand(channelId, payload?.anteAmount || 10);
