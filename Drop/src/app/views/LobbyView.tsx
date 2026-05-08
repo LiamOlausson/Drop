@@ -5,9 +5,10 @@ import type { ActionType } from '../../game/types';
 interface LobbyViewProps {
     channelName?: string;
     executeAction: (action: ActionType | 'Initialize' | 'Join' | 'StartHand', payload?: any) => void;
+    onOpenAdmin?: () => void;
 }
 
-export const LobbyView: React.FC<LobbyViewProps> = ({ channelName, executeAction }) => {
+export const LobbyView: React.FC<LobbyViewProps> = ({ channelName, executeAction, onOpenAdmin}) => {
     const [playerTracking, setPlayerTracking] = useState(false);
     return (
         <div style={{
@@ -134,11 +135,10 @@ export const LobbyView: React.FC<LobbyViewProps> = ({ channelName, executeAction
             }}>
                 <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg, transparent, rgba(240,192,64,0.15))' }} />
                 <span style={{ fontFamily: 'Crimson Pro, serif', fontStyle: 'italic', fontSize: 11, color: 'rgba(201,173,135,0.25)', letterSpacing: 2 }}>
-          TOWER OF LUCK
-        </span>
+                    <span style={{ cursor: 'pointer' }} onClick={onOpenAdmin}>🔒</span> TOWER OF LUCK
+                </span>
                 <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg, rgba(240,192,64,0.15), transparent)' }} />
             </div>
-
         </div>
     );
 };

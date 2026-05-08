@@ -45,8 +45,6 @@ export async function initializeGame(channelId: string, hostId: string, playerTr
     return initialState;
 }
 
-
-
 /**
  * Retrieves the current game state for a specific channel.
  * * @param channelId The Discord Channel ID to use as the namespace
@@ -112,6 +110,13 @@ export async function joinGame(channelId: string, userId: string, userName?: str
             state.assignedNames[userId] = userName;
         } else if (savedName) {
             state.assignedNames[userId] = savedName;
+        }
+
+        // Add user to the master tracking registry for the Admin Panel
+        const trackedUsers = await Flashcore.get<string[]>('tracked_users') || [];
+        if (!trackedUsers.includes(userId)) {
+            trackedUsers.push(userId);
+            await Flashcore.set('tracked_users', trackedUsers);
         }
     } else {
         // Assign a random thematic name to the player

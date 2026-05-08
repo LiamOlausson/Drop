@@ -5,12 +5,14 @@ import { useGameState } from '../hooks/useGameState';
 import { LobbyView } from './views/LobbyView';
 import { ActiveGameView } from './views/ActiveGameView';
 import { JudgementView } from './views/JudgementView';
+import { AdminView } from './views/AdminView';
 
 export const Activity = () => {
     const { authenticated, discordSdk, status } = useDiscordSdk();
-    // FIX 5: pull playerNames from useGameState
+    // pull playerNames from useGameState
     const { gameState, userId, playerNames, executeAction, isReady } = useGameState();
     const [channelName, setChannelName] = useState<string>();
+    const [isAdminOpen, setIsAdminOpen] = useState(false);
 
     useEffect(() => {
         if (!authenticated || !discordSdk.channelId || !discordSdk.guildId) return;
@@ -40,15 +42,22 @@ export const Activity = () => {
     }
 
     return (
-        // FIX 7: root container is fixed/viewport-locked
+        // root container is fixed/viewport-locked
         <div style={{
             position: 'fixed', inset: 0,
             display: 'flex', flexDirection: 'column',
             overflow: 'hidden',
             zIndex: 1,
         }}>
+            {isAdminOpen && <AdminView onClose={() => setIsAdminOpen(false)} />}
+
             {!gameState ? (
-                <LobbyView channelName={channelName} executeAction={executeAction} />
+                // Pass the function to open the admin view
+                <LobbyView
+                    channelName={channelName}
+                    executeAction={executeAction}
+                    onOpenAdmin={() => setIsAdminOpen(true)}
+                />
             ) : gameState.phase === 'Judgement' ? (
                 <JudgementView
                     gameState={gameState}
