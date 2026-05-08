@@ -65,6 +65,7 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({ gameState, playerId, pla
         const hasResponded = sm.playersPassed.includes(playerId) || sm.playersChallenged.includes(playerId);
 
         if (isSmuggler) return <Scroll><WaitMsg icon="🃏">Waiting for the table to respond to your Smuggle…</WaitMsg></Scroll>;
+        if (player.isDead || player.hasFolded) return <Scroll><WaitMsg icon="⚑">Waiting… (you're out)</WaitMsg></Scroll>;
         if (hasResponded) return <Scroll><WaitMsg icon="⏳">You've responded. Waiting for others…</WaitMsg></Scroll>;
 
         return (

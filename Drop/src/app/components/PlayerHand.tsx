@@ -23,6 +23,9 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
     const result = player.handResult ? RESULT_CONFIG[player.handResult] : null;
     const isOut  = player.isDead || player.hasFolded;
     const name   = displayName || player.id.substring(0, 12);
+    const score = player.hand.reduce((s, c) => s + (isCurrentPlayer || c.isRevealed ? c.value : 0), 0);
+    const hasHidden = !isCurrentPlayer && player.hand.some(c => !c.isRevealed);
+    const scoreDisplay = hasHidden ? `${score}? pts` : `${score} pts`;
 
     /* ── Compact version for side panel ── */
     if (compact) {
@@ -40,17 +43,21 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                 transition: 'all 0.3s ease',
             }}>
                 {/* Name + balance row */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', marginBottom: 6, gap: 4 }}>
                     <span style={{
                         fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 0.5,
                         color: isActiveTurn ? '#f0c040' : '#c9ad87',
                         fontWeight: isActiveTurn ? 700 : 400,
                         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                        maxWidth: 100,
                     }}>
                         {isActiveTurn && '▶ '}{name}
                     </span>
-                    <span style={{ fontFamily: 'Crimson Pro, serif', fontSize: 12, color: 'rgba(201,173,135,0.7)', flexShrink: 0 }}>
+                    <span style={{
+                        fontFamily: 'Cinzel, serif', fontSize: 11, color: '#f0c040', fontWeight: 700, textAlign: 'center'
+                    }}>
+                        {scoreDisplay}
+                    </span>
+                    <span style={{ fontFamily: 'Crimson Pro, serif', fontSize: 12, color: 'rgba(201,173,135,0.7)', textAlign: 'right' }}>
                         🪙{player.balance}
                     </span>
                 </div>
@@ -132,18 +139,27 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
 
             {/* Header */}
             <div style={{
-                width: '100%', display: 'flex', justifyContent: 'space-between',
-                alignItems: 'center', marginTop: isActiveTurn ? 8 : 0,
+                width: '100%', display: 'grid', gridTemplateColumns: '1fr auto 1fr',
+                alignItems: 'center', marginTop: isActiveTurn ? 8 : 0, gap: 8
             }}>
                 <span style={{
                     fontFamily: 'Cinzel, serif', fontSize: 11, letterSpacing: 0.5,
                     color: isCurrentPlayer ? '#f0c040' : '#c9ad87',
                     fontWeight: isCurrentPlayer ? 700 : 400,
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
                 }}>
                     {/* FIX 5: Show display name */}
                     {name}{isCurrentPlayer && ' ★'}
                 </span>
-                <span style={{ fontFamily: 'Crimson Pro, serif', fontSize: 14, color: '#c9ad87' }}>
+
+                <span style={{
+                    fontFamily: 'Cinzel, serif', fontSize: 13, fontWeight: 700,
+                    color: '#f0c040', textAlign: 'center'
+                }}>
+                    {scoreDisplay}
+                </span>
+
+                <span style={{ fontFamily: 'Crimson Pro, serif', fontSize: 14, color: '#c9ad87', textAlign: 'right' }}>
                     🪙 {player.balance}
                 </span>
             </div>

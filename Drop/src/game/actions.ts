@@ -474,6 +474,9 @@ export async function passSmuggle(channelId: string, playerId: string): Promise<
     const state = await getDropState(channelId);
     if (!state?.pendingSmuggle) return;
 
+    const player = state.players[playerId];
+    if (player.isDead || player.hasFolded) return;
+
     const smuggle = state.pendingSmuggle;
     if (!smuggle.playersPassed.includes(playerId)) {
         smuggle.playersPassed.push(playerId);
@@ -491,6 +494,9 @@ export async function passSmuggle(channelId: string, playerId: string): Promise<
 export async function challengeSmuggle(channelId: string, challengerId: string): Promise<void> {
     const state = await getDropState(channelId);
     if (!state?.pendingSmuggle) return;
+
+    const player = state.players[challengerId];
+    if (player.isDead || player.hasFolded) return;
 
     state.pendingSmuggle.playersChallenged.push(challengerId);
     state.pendingSmuggle.status = 'ResolvingChallenge';

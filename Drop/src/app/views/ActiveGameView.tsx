@@ -28,6 +28,8 @@ export const ActiveGameView: React.FC<ActiveGameViewProps> = ({ gameState, userI
             display: 'flex', flexDirection: 'column',
             overflow: 'hidden',
             zIndex: 1,
+            padding: 'env(safe-area-inset-top, 16px) env(safe-area-inset-right, 16px) env(safe-area-inset-bottom, 24px) env(safe-area-inset-left, 16px)',
+            boxSizing: 'border-box'
         }}>
             {/* ── Top Header Bar ── */}
             <div style={{
@@ -191,7 +193,9 @@ export const ActiveGameView: React.FC<ActiveGameViewProps> = ({ gameState, userI
                                     {/* Action menu - takes remaining space */}
                                     <div style={{
                                         width: '100%', maxWidth: 600,
-                                        flexShrink: 0,
+                                        flexShrink: 1,
+                                        overflowY: 'auto',
+                                        paddingBottom: 10
                                     }}>
                                         <ActionMenu
                                             gameState={gameState}
