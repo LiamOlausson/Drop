@@ -112,7 +112,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({ channelName, executeAction
                         e.currentTarget.style.transform = 'translateY(0)';
                     }}
                 >
-                    ⚔ Open a Table
+                    Open a Table
                 </button>
 
                 <label style={{

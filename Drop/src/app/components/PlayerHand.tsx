@@ -53,7 +53,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                             fontWeight: isActiveTurn ? 700 : 400,
                             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                         }}>
-                            {isActiveTurn && '▶ '}{name}
+                            {isActiveTurn && ''}{name}
                         </span>
                         <span style={{
                             fontFamily: 'Cinzel, serif', fontSize: 11, color: '#f0c040', fontWeight: 700, textAlign: 'center'
@@ -76,7 +76,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                         <div style={{
                             color: '#6b5e5e', fontFamily: 'Crimson Pro, serif',
                             fontStyle: 'italic', fontSize: 11, marginBottom: 6,
-                        }}>{player.isDead ? '✝ Out' : '⚑ Folded'}</div>
+                        }}>{player.isDead ? 'Out' : 'Folded'}</div>
                     ) : null}
 
                     {/* Cards — hidden face-down, small */}
@@ -191,7 +191,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                     background: '#1a1410', color: '#6b5e5e', padding: '3px 14px',
                     borderRadius: 4, fontFamily: 'Crimson Pro, serif', fontStyle: 'italic', fontSize: 12,
                 }}>
-                    {player.isDead ? '✝ Eliminated' : '⚑ Folded'}
+                    {player.isDead ? 'Eliminated' : 'Folded'}
                 </div>
             ) : null}
 

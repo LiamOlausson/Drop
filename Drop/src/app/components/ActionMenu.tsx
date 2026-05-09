@@ -11,13 +11,13 @@ interface ActionMenuProps {
 
 type SubAction = ActionType | null;
 
-const ACTIONS: Array<{ id: ActionType; label: string; icon: string; desc: string; color: string }> = [
-    { id: 'Scavenge', label: 'Scavenge', icon: '⚒',  desc: 'Swap a card with the Discard or Fallen pile.',       color: '#6a8c4a' },
-    { id: 'Dive',     label: 'Dive',     icon: '⬇',  desc: 'Discard 2, pay ante, draw 2 from the deck.',          color: '#4a6a8c' },
-    { id: 'Ascend',   label: 'Ascend',   icon: '⬆',  desc: 'Raise the stakes. Others must call or fold.',          color: '#8c4a4a' },
-    { id: 'Snitch',   label: 'Snitch',   icon: '👁',  desc: 'Force a target to reveal their highest or lowest.',    color: '#7a6a2a' },
-    { id: 'Smuggle',  label: 'Smuggle',  icon: '🃏',  desc: 'Drop a card face-down, declare its rank.',            color: '#6a4a8c' },
-    { id: 'Sabotage', label: 'Sabotage', icon: '⚡',  desc: "Choose an opponent's card to cast to the Fallen pile.",color: '#8c6a2a' },
+const ACTIONS: Array<{ id: ActionType; label: string; desc: string; color: string }> = [
+    { id: 'Scavenge', label: 'Scavenge',  desc: 'Swap a card with the Discard or Fallen pile.',       color: '#6a8c4a' },
+    { id: 'Dive',     label: 'Dive',  desc: 'Discard 2, pay ante, draw 2 from the deck.',          color: '#4a6a8c' },
+    { id: 'Ascend',   label: 'Ascend',  desc: 'Raise the stakes. Others must call or fold.',          color: '#8c4a4a' },
+    { id: 'Snitch',   label: 'Snitch',  desc: 'Force a target to reveal their highest or lowest.',    color: '#7a6a2a' },
+    { id: 'Smuggle',  label: 'Smuggle',  desc: 'Drop a card face-down, declare its rank.',            color: '#6a4a8c' },
+    { id: 'Sabotage', label: 'Sabotage',  desc: "Choose an opponent's card to cast to the Fallen pile.",color: '#8c6a2a' },
 ];
 
 export const ActionMenu: React.FC<ActionMenuProps> = ({ gameState, playerId, playerNames, onAction }) => {
@@ -65,12 +65,12 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({ gameState, playerId, pla
         const isSmuggler   = sm.smugglerId === playerId;
         const hasResponded = sm.playersPassed.includes(playerId) || sm.playersChallenged.includes(playerId);
 
-        if (isSmuggler) return <Scroll><WaitMsg icon="🃏">Waiting for the table to respond to your Smuggle…</WaitMsg></Scroll>;
-        if (player.isDead || player.hasFolded) return <Scroll><WaitMsg icon="⚑">Waiting… (you're out)</WaitMsg></Scroll>;
-        if (hasResponded) return <Scroll><WaitMsg icon="⏳">You've responded. Waiting for others…</WaitMsg></Scroll>;
+        if (isSmuggler) return <Scroll><WaitMsg>Waiting for the table to respond to your Smuggle…</WaitMsg></Scroll>;
+        if (player.isDead || player.hasFolded) return <Scroll><WaitMsg>Waiting… (you're out)</WaitMsg></Scroll>;
+        if (hasResponded) return <Scroll><WaitMsg>You've responded. Waiting for others…</WaitMsg></Scroll>;
 
         return (
-            <Scroll title="⚠ A Smuggle Has Occurred">
+            <Scroll title="A Smuggle Has Occurred">
                 <p style={descStyle}>
                     <strong style={{ color: '#f0c040' }}>{getName(sm.smugglerId)}</strong>{' '}
                     dropped a card claiming it is a{' '}
@@ -79,10 +79,10 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({ gameState, playerId, pla
                 </p>
                 <div style={rowStyle}>
                     <TavernBtn color="blood" onClick={() => onAction('ChallengeSmuggle')}>
-                        ⚔ Challenge
+                        Challenge
                     </TavernBtn>
                     <TavernBtn color="mold" onClick={() => onAction('PassSmuggle')}>
-                        ✓ Pass
+                        Pass
                     </TavernBtn>
                 </div>
             </Scroll>
@@ -94,12 +94,12 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({ gameState, playerId, pla
         const dec = gameState.pendingDecree;
         const isSmuggler = dec.smugglerId === playerId;
 
-        if (!isSmuggler) return <Scroll><WaitMsg icon="📜">Waiting for the Smuggler to issue their Decree…</WaitMsg></Scroll>;
+        if (!isSmuggler) return <Scroll><WaitMsg>Waiting for the Smuggler to issue their Decree…</WaitMsg></Scroll>;
 
         // Specific UI for Hollow
         if (dec.decreeType === 'Hollow') {
             return (
-                <Scroll title="📜 Decree of the Hollow">
+                <Scroll title="Decree of the Hollow">
                     <p style={descStyle}>Choose a player. They must discard their highest rank card.</p>
                     <Field label="Target:">
                         <select value={targetId} onChange={e => setTargetId(e.target.value)}>
@@ -127,8 +127,8 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({ gameState, playerId, pla
             });
 
             return (
-                <Scroll title="📜 Decree of the Glow Worm">
-                    <p style={descStyle}>Choose a player with a revealed card. They must add another ante (10 🪙) into the pot.</p>
+                <Scroll title="Decree of the Glow Worm">
+                    <p style={descStyle}>Choose a player with a revealed card. They must add another ante into the pot.</p>
                     <Field label="Target:">
                         <select value={targetId} onChange={e => setTargetId(e.target.value)}>
                             <option value="" disabled>Select target…</option>
@@ -150,7 +150,7 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({ gameState, playerId, pla
         // Specific UI for Citizen
         if (dec.decreeType === 'Citizen') {
             return (
-                <Scroll title="📜 Decree of the Citizen">
+                <Scroll title="Decree of the Citizen">
                     <p style={descStyle}>Take any card from the Discard Pile, then discard one from your hand.</p>
 
                     <Field label="Card to take (from Discard):">
@@ -197,7 +197,7 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({ gameState, playerId, pla
             });
 
             return (
-                <Scroll title="📜 Decree of the Warden">
+                <Scroll title="Decree of the Warden">
                     <p style={descStyle}>Choose a player with a revealed card. They must declare if their score is ≥ 20.</p>
                     <Field label="Target:">
                         <select value={targetId} onChange={e => setTargetId(e.target.value)}>
@@ -220,7 +220,7 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({ gameState, playerId, pla
         // Specific UI for Baron
         if (dec.decreeType === 'Baron') {
             return (
-                <Scroll title="📜 Decree of the Baron">
+                <Scroll title="Decree of the Baron">
                     <p style={descStyle}>Choose a player. They must truthfully announce which card ranks are present in their hand.</p>
                     <Field label="Target:">
                         <select value={targetId} onChange={e => setTargetId(e.target.value)}>
@@ -241,7 +241,7 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({ gameState, playerId, pla
         }
 
         // Fallback for decrees we haven't built yet
-        return <Scroll><WaitMsg icon="📜">The {dec.decreeType} Decree is being written…</WaitMsg></Scroll>;
+        return <Scroll><WaitMsg>The {dec.decreeType} Decree is being written…</WaitMsg></Scroll>;
     }
 
     /* ── Ascend response overlay ── */
@@ -251,12 +251,12 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({ gameState, playerId, pla
         const isInitiator  = asc.initiatorId === playerId;
         const amountToCall = gameState.currentAnteToCall - player.antePaid;
 
-        if (isInitiator)  return <Scroll><WaitMsg icon="⬆">Waiting for the table to respond…</WaitMsg></Scroll>;
-        if (player.isDead || player.hasFolded) return <Scroll><WaitMsg icon="⚑">Waiting… (you're out)</WaitMsg></Scroll>;
-        if (hasResponded) return <Scroll><WaitMsg icon="⏳">You've responded. Waiting for others…</WaitMsg></Scroll>;
+        if (isInitiator)  return <Scroll><WaitMsg>Waiting for the table to respond…</WaitMsg></Scroll>;
+        if (player.isDead || player.hasFolded) return <Scroll><WaitMsg>Waiting… (you're out)</WaitMsg></Scroll>;
+        if (hasResponded) return <Scroll><WaitMsg>You've responded. Waiting for others…</WaitMsg></Scroll>;
 
         return (
-            <Scroll title="⬆ The Stakes Rise">
+            <Scroll title="Others Are Ascending">
                 <p style={descStyle}>
                     <strong style={{ color: '#f0c040' }}>{getName(asc.initiatorId)}</strong>{' '}
                     has Ascended. Pay{' '}
@@ -264,10 +264,10 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({ gameState, playerId, pla
                 </p>
                 <div style={rowStyle}>
                     <TavernBtn color="mold" onClick={() => onAction('RespondAscend', { response: 'Call' })}>
-                        ✓ Call — {amountToCall} 🪙
+                        Climb — {amountToCall} 🪙
                     </TavernBtn>
                     <TavernBtn color="blood" onClick={() => onAction('RespondAscend', { response: 'Fold' })}>
-                        ⚑ Fold
+                        Go To The Bridge
                     </TavernBtn>
                 </div>
             </Scroll>
@@ -277,14 +277,14 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({ gameState, playerId, pla
     /* ── Waiting / Phase gates ── */
     if (!isMyTurn || (gameState.phase !== 'The Climb' && gameState.phase !== 'Battle')) {
         if (gameState.phase === 'Setup' || gameState.phase === 'Feeding The Sump')
-            return <Scroll><WaitMsg icon="🕯">The hand hasn't started yet…</WaitMsg></Scroll>;
+            return <Scroll><WaitMsg>The hand hasn't started yet…</WaitMsg></Scroll>;
         if (gameState.phase === 'Judgement')
-            return <Scroll><WaitMsg icon="⚖">Scores being tallied…</WaitMsg></Scroll>;
+            return <Scroll><WaitMsg>Scores being tallied…</WaitMsg></Scroll>;
 
         const acting = gameState.turnOrder[gameState.currentTurnIndex];
         return (
             <Scroll>
-                <WaitMsg icon="⏳">
+                <WaitMsg>
                     Waiting for <strong style={{ color: '#f0c040' }}>{getName(acting)}</strong>…
                 </WaitMsg>
             </Scroll>
@@ -295,17 +295,17 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({ gameState, playerId, pla
     if (gameState.phase === 'Battle') {
         if (!selectedAction) {
             return (
-                <Scroll title="⚔ Battle — Final Round">
+                <Scroll title="Battle — Final Round">
                     <p style={descStyle}>Ascend the stakes or pass.</p>
                     <div style={rowStyle}>
-                        <TavernBtn color="candle" onClick={() => setSelectedAction('Ascend')}>⬆ Ascend</TavernBtn>
+                        <TavernBtn color="candle" onClick={() => setSelectedAction('Ascend')}>Ascend</TavernBtn>
                         <TavernBtn color="muted" onClick={() => onAction('Ascend', { raiseAmount: 0 })}>— Pass</TavernBtn>
                     </div>
                 </Scroll>
             );
         }
         return (
-            <Scroll title="⬆ Ascend">
+            <Scroll title="Ascend">
                 <AscendInput
                     value={raiseAmount}
                     inputValue={raiseInput}
@@ -342,7 +342,7 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({ gameState, playerId, pla
 
     /* ── Sub-menus ── */
     return (
-        <Scroll title={`${ACTIONS.find(a => a.id === selectedAction)?.icon} ${selectedAction}`}>
+        <Scroll title={selectedAction}>
 
             {/* SCAVENGE */}
             {selectedAction === 'Scavenge' && (
@@ -449,7 +449,7 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({ gameState, playerId, pla
                     />
                     <div style={rowStyle}>
                         <TavernBtn color="blood" onClick={() => { onAction('Ascend', { raiseAmount }); back(); }}>
-                            ⬆ Ascend +{raiseAmount} 🪙
+                            Ascend +{raiseAmount} 🪙
                         </TavernBtn>
                         <BackLink onClick={back} />
                     </div>
@@ -478,7 +478,7 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({ gameState, playerId, pla
                         <TavernBtn color="rust" disabled={!targetId} onClick={() => {
                             const type = (document.getElementById('snitch-type') as HTMLSelectElement).value;
                             onAction('Snitch', { targetId, type }); back();
-                        }}>👁 Snitch</TavernBtn>
+                        }}>Snitch</TavernBtn>
                         <BackLink onClick={back} />
                     </div>
                 </div>
@@ -509,7 +509,7 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({ gameState, playerId, pla
                         <TavernBtn color="candle" disabled={!selectedCardId} onClick={() => {
                             const rank = (document.getElementById('smuggle-rank') as HTMLSelectElement).value;
                             onAction('Smuggle', { cardId: selectedCardId, declaredRank: rank }); back();
-                        }}>🃏 Smuggle</TavernBtn>
+                        }}>Smuggle</TavernBtn>
                         <BackLink onClick={back} />
                     </div>
                 </div>
@@ -548,7 +548,7 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({ gameState, playerId, pla
                             const cardIndex   = parseInt((document.getElementById('sab-card') as HTMLSelectElement).value);
                             const revealIndex = parseInt((document.getElementById('sab-reveal') as HTMLSelectElement).value);
                             onAction('Sabotage', { targetId, cardIndex, revealIndex }); back();
-                        }}>⚡ Sabotage</TavernBtn>
+                        }}>Sabotage</TavernBtn>
                         <BackLink onClick={back} />
                     </div>
                 </div>
@@ -582,13 +582,12 @@ const Scroll: React.FC<{ children: React.ReactNode; title?: string }> = ({ child
     </div>
 );
 
-const WaitMsg: React.FC<{ children: React.ReactNode; icon?: string }> = ({ children, icon }) => (
+const WaitMsg: React.FC<{ children: React.ReactNode;}> = ({ children}) => (
     <p style={{
         fontFamily: 'Crimson Pro, serif', fontStyle: 'italic', fontSize: 15,
         color: 'rgba(201,173,135,0.6)', textAlign: 'center', padding: '4px 0',
         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
     }}>
-        {icon && <span>{icon}</span>}
         {children}
     </p>
 );
@@ -642,7 +641,6 @@ const ActionTile: React.FC<{ action: typeof ACTIONS[0]; onClick: () => void }> =
                 e.currentTarget.style.color = '#c9ad87';
                 e.currentTarget.style.transform = 'translateY(0)';
             }}>
-        <span style={{ fontSize: 18 }}>{action.icon}</span>
         <span style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 0.5, textTransform: 'uppercase' }}>
             {action.label}
         </span>
@@ -729,7 +727,7 @@ const BackLink: React.FC<{ onClick: () => void }> = ({ onClick }) => (
         color: 'rgba(201,173,135,0.4)', fontSize: 13,
         fontFamily: 'Crimson Pro, serif', fontStyle: 'italic',
         cursor: 'pointer', textDecoration: 'underline', padding: '0 8px', flexShrink: 0,
-    }}>← Back</button>
+    }}>Back</button>
 );
 
 const descStyle: React.CSSProperties = {

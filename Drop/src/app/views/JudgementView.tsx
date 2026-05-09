@@ -217,7 +217,7 @@ export const JudgementView: React.FC<JudgementViewProps> = ({ gameState, userId,
                                 }}
                                 onMouseOver={e => { e.currentTarget.style.color = '#c9ad87'; }}
                                 onMouseOut={e  => { e.currentTarget.style.color = 'rgba(201,173,135,0.5)'; }}
-                            >← Return to Lobby</button>
+                            >Return to Lobby</button>
                         )}
                     </div>
                 </div>

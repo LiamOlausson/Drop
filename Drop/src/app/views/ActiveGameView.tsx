@@ -145,7 +145,7 @@ export const ActiveGameView: React.FC<ActiveGameViewProps> = ({ gameState, userI
                                         onClick={() => executeAction('Join', { userName: playerNames[userId] })}
                                         style={setupBtnStyle('#f0c040', 'rgba(240,192,64,0.12)')}
                                     >
-                                        ⚔ Sit Down
+                                        Sit Down
                                     </button>
                                 )}
                                 {/* Allow isLeader OR isHost to deal */}
