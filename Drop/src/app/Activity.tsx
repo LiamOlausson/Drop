@@ -35,7 +35,7 @@ export const Activity = () => {
                     fontFamily: 'Cinzel, serif', letterSpacing: 3,
                     fontSize: 13, color: 'rgba(240,192,64,0.5)', textTransform: 'uppercase',
                 }}>
-                    {status === 'authenticating' ? 'Proving yourself…' : 'Lighting the candles…'}
+                    {status === 'authenticating' ? 'Proving yourself…' : 'Kaito: Who are you? (Restart Activity)'}
                 </p>
             </div>
         );

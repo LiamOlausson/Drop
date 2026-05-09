@@ -21,12 +21,26 @@ function advanceTurn(state: DropGameState): boolean {
     const activePlayers = getActivePlayers(state);
     if (activePlayers.length <= 1) return true;
 
-    state.turnsInCurrentRound++;
+    const N = state.turnOrder.length;
+    const oldIndex = state.currentTurnIndex;
 
-    // --- Round boundary: every active player has acted once ---
-    if (state.turnsInCurrentRound >= activePlayers.length) {
-        state.turnsInCurrentRound = 0;
+    // Advance to next active player (skip dead / folded)
+    let newIndex = oldIndex;
+    do {
+        newIndex = (newIndex + 1) % N;
+    } while (
+        state.players[state.turnOrder[newIndex]].isDead ||
+        state.players[state.turnOrder[newIndex]].hasFolded
+        );
 
+    state.currentTurnIndex = newIndex;
+
+    // Calculate distance from the hand leader to determine if we wrapped around
+    const distOld = (oldIndex - state.handLeaderIndex + N) % N;
+    const distNew = (newIndex - state.handLeaderIndex + N) % N;
+
+    // If the new distance is less than or equal to the old distance, a full round has wrapped
+    if (distNew <= distOld) {
         if (state.phase === 'The Climb') {
             state.climbRoundCount++;
 
@@ -35,15 +49,15 @@ function advanceTurn(state: DropGameState): boolean {
                 state.phase = 'Battle';
                 state.climbRoundCount = 0;
 
-                state.currentTurnIndex = state.handLeaderIndex;
-
+                // Reset turn to the first active player starting from the hand leader
+                let start = state.handLeaderIndex;
                 while (
-                    state.players[state.turnOrder[state.currentTurnIndex]].isDead ||
-                    state.players[state.turnOrder[state.currentTurnIndex]].hasFolded
+                    state.players[state.turnOrder[start]].isDead ||
+                    state.players[state.turnOrder[start]].hasFolded
                     ) {
-                    state.currentTurnIndex = (state.currentTurnIndex + 1) % state.turnOrder.length;
+                    start = (start + 1) % N;
                 }
-
+                state.currentTurnIndex = start;
                 return false;
             }
         } else if (state.phase === 'Battle') {
@@ -51,14 +65,6 @@ function advanceTurn(state: DropGameState): boolean {
             return true;
         }
     }
-
-    // Advance to next active player (skip dead / folded)
-    do {
-        state.currentTurnIndex = (state.currentTurnIndex + 1) % state.turnOrder.length;
-    } while (
-        state.players[state.turnOrder[state.currentTurnIndex]].isDead ||
-        state.players[state.turnOrder[state.currentTurnIndex]].hasFolded
-        );
 
     return false;
 }
@@ -198,7 +204,7 @@ export async function startHand(channelId: string, anteAmount: number): Promise<
         state.pendingSmuggle = undefined;
     }
 
-    // FIX 3: Reset handResult and hand state for each player
+    // Reset handResult and hand state for each player
     for (const playerId of state.turnOrder) {
         const player = state.players[playerId];
         player.isDead      = false;
@@ -206,7 +212,7 @@ export async function startHand(channelId: string, anteAmount: number): Promise<
         player.cannotBeBaron = false;
         player.antePaid    = anteAmount;
         player.hand        = [];
-        player.handResult  = undefined; // <-- clear previous round result
+        player.handResult  = undefined; // clear previous round result
 
         // Deduct ante from balance and add to pot
         player.balance -= anteAmount;
@@ -337,7 +343,7 @@ export async function performAscend(
         return true;
     }
 
-    // FIX 2: Deduct raise amount from ascender's balance
+    // Deduct raise amount from ascender's balance
     const player = state.players[playerId];
     if (player.balance < raiseAmount) return false; // can't bet what you don't have
 
@@ -528,24 +534,22 @@ async function resolveSmuggle(state: DropGameState, challengerId?: string) {
     const smuggle  = state.pendingSmuggle!;
     const smuggler = state.players[smuggle.smugglerId];
 
-    // 1. The smuggler always gets the drawn card to replace their dropped card
+    // The smuggler always gets the drawn card to replace their dropped card
     smuggler.hand.push(smuggle.drawnCard);
 
     if (challengerId) {
         const accuser = state.players[challengerId];
-
-        // 2. Evaluate if the smuggler told the truth
         const toldTruth = smuggle.actualCard.rank === smuggle.declaredRank;
 
-        // 3. The challenged card is revealed to the table and goes to the discard pile
+        // The challenged card is revealed to the table and goes to the discard pile
         state.discardPile.push({ ...smuggle.actualCard, isRevealed: true });
 
-        // 4. BI-DIRECTIONAL LOGIC: Determine the loser and winner of the challenge
+        // Determine the loser and winner of the challenge
         // If the smuggler told the truth, the accuser loses. If the smuggler lied, the smuggler loses.
         const loser = toldTruth ? accuser : smuggler;
         const winner = toldTruth ? smuggler : accuser;
 
-        // 5. The LOSER suffers the consequence of the ACTUAL dropped card's rank
+        // The LOSER suffers the consequence of the actual dropped card's rank
         switch (smuggle.actualCard.rank) {
             case 'Baron':
                 // Loser matches the current value of the pot
@@ -581,6 +585,11 @@ async function resolveSmuggle(state: DropGameState, challengerId?: string) {
                 loser.isDead = true;
                 break;
         }
+        // Clean up smuggle state and advance turn
+        state.pendingSmuggle = undefined;
+        const judge = advanceTurn(state);
+        if (judge) evaluateJudgementSync(state);
+        return;
     } else {
         // Unchallenged: card goes face down to the fallen pile
         state.fallenPile.push(smuggle.actualCard);
@@ -588,7 +597,6 @@ async function resolveSmuggle(state: DropGameState, challengerId?: string) {
         // Transition from Smuggle to Decree phase
         const declaredRank = smuggle.declaredRank;
         const smugglerId = smuggle.smugglerId;
-
         state.pendingSmuggle = undefined; // Clear smuggle
 
         // Auto-skip decrees that require a revealed card if no one has one
@@ -603,31 +611,22 @@ async function resolveSmuggle(state: DropGameState, challengerId?: string) {
                 return; // End early, bypassing the decree
             }
         }
-
         // Auto-skip Citizen if the discard pile is empty
         else if (declaredRank === 'Citizen') {
             if (state.discardPile.length === 0) {
                 const judge = advanceTurn(state);
                 if (judge) evaluateJudgementSync(state);
-                return;
+                return; // End early, bypassing the decree
             }
         }
 
-        // Initialize the decree state
+        // Transition to the decree state
         state.pendingDecree = {
             smugglerId: smugglerId,
             decreeType: declaredRank,
             step: 'AwaitingChoice'
         };
-
-        // Some decrees might automatically resolve if no valid targets exist.
     }
-
-    // Clean up pending state and advance turn
-    state.pendingSmuggle = undefined;
-
-    const judge = advanceTurn(state);
-    if (judge) evaluateJudgementSync(state);
 }
 
 // ===========================================================================
