@@ -67,7 +67,7 @@ export const Card: React.FC<CardProps> = ({ card, hidden, size = 'md', style }) 
             width: sz.w, height: sz.h,
             borderRadius: 8,
             background: `linear-gradient(160deg, #f0e8d0 0%, #e4d4b0 50%, #d8c496 100%)`,
-            // FIX 1: revealed = thicker colored border only, no banner
+            // revealed = thicker colored border only, no banner
             border: card.isRevealed
                 ? `3px solid ${cfg.color}`
                 : '2px solid rgba(200,180,140,0.6)',
@@ -90,7 +90,7 @@ export const Card: React.FC<CardProps> = ({ card, hidden, size = 'md', style }) 
                 )`,
             }} />
 
-            {/* FIX 1: Revealed indicator — small symbol in top-right corner only */}
+            {/* Revealed indicator — small symbol in top-right corner only */}
             {card.isRevealed && (
                 <div style={{
                     position: 'absolute', top: 3, right: 4, zIndex: 3,

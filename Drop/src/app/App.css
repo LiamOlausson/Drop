@@ -43,12 +43,12 @@
 
 html {
     width: 100%; height: 100%;
-    overflow: hidden; /* FIX 7 */
+    overflow: hidden;
 }
 
 body {
     width: 100%; height: 100%;
-    overflow: hidden; /* FIX 7 */
+    overflow: hidden;
     background: var(--ink);
     color: var(--parchment);
     font-family: var(--font-body);
@@ -59,7 +59,7 @@ body {
 
 #root {
     width: 100%; height: 100%;
-    overflow: hidden; /* FIX 7 */
+    overflow: hidden;
 }
 
 /* ── Scrollbar (used inside panels only) ── */

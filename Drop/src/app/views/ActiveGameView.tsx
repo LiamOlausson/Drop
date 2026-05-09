@@ -48,18 +48,12 @@ export const ActiveGameView: React.FC<ActiveGameViewProps> = ({ gameState, userI
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                 padding: '8px 20px',
                 borderBottom: '1px solid rgba(240,192,64,0.12)',
-                background: 'rgba(13,10,7,0.85)',
+                background: 'rgb(0,0,0)',
                 backdropFilter: 'blur(4px)',
                 flexShrink: 0,
                 zIndex: 10,
             }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <span style={{
-                        fontFamily: 'Cinzel, serif', fontSize: 20, fontWeight: 900,
-                        color: '#f0c040', letterSpacing: 4,
-                        textShadow: '0 0 20px rgba(240,192,64,0.2)',
-                    }}>DROP</span>
-
                     {/* Admin buttons for the Host */}
                     {isHost && (
                         <div style={{ display: 'flex', gap: 8 }}>
@@ -88,18 +82,6 @@ export const ActiveGameView: React.FC<ActiveGameViewProps> = ({ gameState, userI
                         </div>
                     )}
                 </div>
-
-                <span style={{
-                    fontFamily: 'Crimson Pro, serif', fontStyle: 'italic',
-                    fontSize: 13, color: 'rgba(201,173,135,0.4)', letterSpacing: 1,
-                }}>Round {gameState.roundNumber} · {gameState.phase}</span>
-
-                <div style={{
-                    fontFamily: 'Cinzel, serif', fontSize: 12,
-                    color: 'rgba(240,192,64,0.5)',
-                }}>
-                    🪙 {myPlayer?.balance ?? '—'}
-                </div>
             </div>
 
             {/* ── Main Content Area ── */}
@@ -125,7 +107,7 @@ export const ActiveGameView: React.FC<ActiveGameViewProps> = ({ gameState, userI
                                 fontFamily: 'Cinzel, serif', fontWeight: 700, fontSize: 16,
                                 letterSpacing: 2, color: '#f0c040', textTransform: 'uppercase',
                                 margin: '0 0 4px 0',
-                            }}>The Table is Set</h2>
+                            }}>Setting Up The Table</h2>
                             <p style={{
                                 fontFamily: 'Crimson Pro, serif', fontStyle: 'italic',
                                 fontSize: 14, color: 'rgba(201,173,135,0.5)', margin: '0 0 20px 0',
@@ -190,7 +172,7 @@ export const ActiveGameView: React.FC<ActiveGameViewProps> = ({ gameState, userI
                                             disabled={!!(myPlayer && myPlayer.balance < anteAmount)}
                                             style={setupBtnStyle('#6abf6a', 'rgba(74,122,74,0.12)')}
                                         >
-                                            🃏 Deal the Cards
+                                            Deal Cards
                                         </button>
                                     </div>
                                 )}
@@ -210,7 +192,7 @@ export const ActiveGameView: React.FC<ActiveGameViewProps> = ({ gameState, userI
                                         fontFamily: 'Crimson Pro, serif', fontStyle: 'italic',
                                         fontSize: 13, color: 'rgba(201,173,135,0.4)', flex: 1,
                                     }}>
-                                        Waiting for the Hand Leader to deal…
+                                        Waiting for the Host to start…
                                     </p>
                                 )}
                             </div>
@@ -293,7 +275,7 @@ export const ActiveGameView: React.FC<ActiveGameViewProps> = ({ gameState, userI
                             </div>
                         </div>
 
-                        {/* Center = table + your hand stacked */}
+                        {/* Center = table + player hand stacked */}
                         <div style={{
                             flex: 1, display: 'flex', flexDirection: 'column',
                             alignItems: 'center', overflow: 'hidden',
@@ -301,7 +283,7 @@ export const ActiveGameView: React.FC<ActiveGameViewProps> = ({ gameState, userI
                             gap: 10,
                             position: 'relative'
                         }}>
-                            {/* Expandable Admin Kick Menu */}
+                            {/* Expandable player Kick Menu */}
                             {isHost && opponents.length > 0 && (
                                 <div style={{
                                     position: 'absolute', top: 12, left: 12,
@@ -319,7 +301,7 @@ export const ActiveGameView: React.FC<ActiveGameViewProps> = ({ gameState, userI
                                             boxShadow: '0 4px 12px rgba(0,0,0,0.5)'
                                         }}
                                     >
-                                        {isKickMenuOpen ? 'Close Panel' : 'Admin Panel'}
+                                        {isKickMenuOpen ? 'Close Panel' : 'Host Actions'}
                                     </button>
 
                                     {isKickMenuOpen && (
@@ -355,7 +337,7 @@ export const ActiveGameView: React.FC<ActiveGameViewProps> = ({ gameState, userI
                                 <GameBoard gameState={gameState} />
                             </div>
 
-                            {/* Your hand + action menu stacked below board */}
+                            {/* Player hand + action menu stacked below board */}
                             {isPlayerInGame && (
                                 <div style={{
                                     flex: 1, display: 'flex', flexDirection: 'column',
@@ -375,7 +357,7 @@ export const ActiveGameView: React.FC<ActiveGameViewProps> = ({ gameState, userI
                                         <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg, rgba(240,192,64,0.15), transparent)' }} />
                                     </div>
 
-                                    {/* Player's own hand — always visible */}
+                                    {/* Player's own hand, always visible */}
                                     <div style={{ flexShrink: 0 }}>
                                         <PlayerHand
                                             player={gameState.players[userId]}
@@ -385,7 +367,7 @@ export const ActiveGameView: React.FC<ActiveGameViewProps> = ({ gameState, userI
                                         />
                                     </div>
 
-                                    {/* Action menu - takes remaining space */}
+                                    {/* Action menu, takes remaining space */}
                                     <div style={{
                                         width: '100%', maxWidth: 600,
                                         flexShrink: 1,
@@ -403,7 +385,7 @@ export const ActiveGameView: React.FC<ActiveGameViewProps> = ({ gameState, userI
                             )}
                         </div>
 
-                        {/* FIX 4: Right panel = opponents list */}
+                        {/* Right panel = opponents list */}
                         {opponents.length > 0 && (
                             <div style={{
                                 width: 200,

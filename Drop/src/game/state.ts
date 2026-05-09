@@ -26,7 +26,6 @@ export async function initializeGame(channelId: string, hostId: string, playerTr
         baseAnte: 10,
         currentAnteToCall: 0,
         startingBalance: DEFAULT_STARTING_BALANCE,
-        roundNumber: 1,
         turnOrder: [],
         currentTurnIndex: 0,
         handLeaderIndex: 0,

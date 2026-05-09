@@ -154,22 +154,26 @@ export const JudgementView: React.FC<JudgementViewProps> = ({ gameState, userId,
 
                 {/* Action buttons */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 16, alignItems: 'center', paddingTop: 4 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ fontFamily: 'Cinzel, serif', fontSize: 12, color: '#c9ad87', textTransform: 'uppercase' }}>Next Ante:</span>
-                        <input
-                            type="number"
-                            value={anteAmount}
-                            min={0}
-                            onChange={e => setAnteAmount(parseInt(e.target.value) || 1)}
-                            style={{
-                                width: 70, textAlign: 'center',
-                                background: 'rgba(26,20,16,0.8)', border: '1px solid rgba(240,192,64,0.4)',
-                                color: '#f0c040', borderRadius: 4, padding: '6px 8px',
-                                fontFamily: 'Cinzel, serif', outline: 'none'
-                            }}
-                        />
-                        <span style={{ fontFamily: 'Crimson Pro, serif', color: '#f0c040', fontSize: 16 }}>🪙</span>
-                    </div>
+                    {(isHost || isLeader) && !gameState.forceLobby && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, alignItems: 'center', paddingTop: 4 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <span style={{ fontFamily: 'Cinzel, serif', fontSize: 12, color: '#c9ad87', textTransform: 'uppercase' }}>Next Ante:</span>
+                                <input
+                                    type="number"
+                                    value={anteAmount}
+                                    min={0}
+                                    onChange={e => setAnteAmount(parseInt(e.target.value) || 1)}
+                                    style={{
+                                        width: 70, textAlign: 'center',
+                                        background: 'rgba(26,20,16,0.8)', border: '1px solid rgba(240,192,64,0.4)',
+                                        color: '#f0c040', borderRadius: 4, padding: '6px 8px',
+                                        fontFamily: 'Cinzel, serif', outline: 'none'
+                                    }}
+                                />
+                                <span style={{ fontFamily: 'Crimson Pro, serif', color: '#f0c040', fontSize: 16 }}>🪙</span>
+                            </div>
+                        </div>
+                    )}
 
                     <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
                         {/* Allow Leader or Host to start the next hand */}
@@ -186,7 +190,7 @@ export const JudgementView: React.FC<JudgementViewProps> = ({ gameState, userId,
                                 }}
                                 onMouseOver={e => { e.currentTarget.style.background = 'rgba(240,192,64,0.22)'; }}
                                 onMouseOut={e  => { e.currentTarget.style.background = 'rgba(240,192,64,0.12)'; }}
-                            >🃏 Deal Next Hand</button>
+                            > Deal Next Hand</button>
                         )}
 
                         {/* Closure warning */}

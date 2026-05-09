@@ -102,7 +102,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
             }}>
                 <Pile label="Discard" count={gameState.discardPile.length} card={topDiscard} />
                 <Pile label="Draw" count={gameState.drawPile.length} hidden />
-                <Pile label="Fallen" count={gameState.fallenPile.length} card={topFallen} />
+                <Pile label="Fallen" count={gameState.fallenPile.length} card={topFallen} hidden />
             </div>
 
             {/* Footer info bar */}
@@ -112,11 +112,8 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
                 borderTop: '1px solid rgba(240,192,64,0.1)',
                 position: 'relative', zIndex: 1,
             }}>
-        <span style={{ fontFamily: 'Crimson Pro, serif', fontSize: 13, color: 'rgba(201,173,135,0.6)', fontStyle: 'italic' }}>
-          Round {gameState.roundNumber}
-        </span>
                 <span style={{ fontFamily: 'Crimson Pro, serif', fontSize: 13, color: 'rgba(201,173,135,0.6)', fontStyle: 'italic' }}>
-          Ante to call: <strong style={{ color: '#c9ad87' }}>{gameState.currentAnteToCall} 🪙</strong>
+          Current Bet Amount (per person): <strong style={{ color: '#c9ad87' }}>{gameState.currentAnteToCall} 🪙</strong>
         </span>
             </div>
         </div>

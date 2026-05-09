@@ -271,7 +271,8 @@ export async function startHand(channelId: string, anteAmount: number): Promise<
 
 export async function performScavenge(
     channelId: string, playerId: string,
-    cardToDiscardId: string, source: 'discard' | 'fallen' | 'draw'
+    cardToDiscardId: string, source: 'discard' | 'fallen' | 'opponent',
+    targetPlayerId?: string, targetCardId?: string
 ): Promise<boolean> {
     const state = await getDropState(channelId);
     if (!state || state.turnOrder[state.currentTurnIndex] !== playerId) return false;
@@ -281,17 +282,46 @@ export async function performScavenge(
     if (cardIndex === -1) return false;
 
     let drawn;
+
     if (source === 'discard' && state.discardPile.length > 0) {
         drawn = state.discardPile.pop()!;
     } else if (source === 'fallen' && state.fallenPile.length > 0) {
         drawn = state.fallenPile.pop()!;
+    } else if (source === 'opponent' && targetPlayerId && targetCardId) {
+        const target = state.players[targetPlayerId];
+        if (!target || target.isDead || target.hasFolded) return false;
+
+        // Ensure the card exists and is actually revealed
+        const targetCardIndex = target.hand.findIndex(c => c.id === targetCardId);
+        if (targetCardIndex === -1 || !target.hand[targetCardIndex].isRevealed) return false;
+
+        // 1. Take the revealed card from the opponent
+        drawn = target.hand.splice(targetCardIndex, 1)[0];
+
+        // 2. Opponent immediately redraws to replace it (Priority: Discard -> Fallen -> Draw)
+        let replacementCard;
+        if (state.discardPile.length > 0) {
+            replacementCard = state.discardPile.pop()!;
+        } else if (state.fallenPile.length > 0) {
+            replacementCard = state.fallenPile.pop()!;
+        } else if (state.drawPile.length > 0) {
+            replacementCard = state.drawPile.shift()!;
+        }
+
+        // Add the replacement card to the opponent's hand face-down
+        if (replacementCard) {
+            replacementCard.isRevealed = false;
+            target.hand.push(replacementCard);
+        }
     } else {
         return false;
     }
 
+    // Initiator drops their card to the discard pile face-up
     const discarded = player.hand.splice(cardIndex, 1)[0];
     discarded.isRevealed = true;
 
+    // Initiator gains the drawn card face-down
     drawn.isRevealed = false;
     player.hand.push(drawn);
     state.discardPile.push(discarded);
@@ -299,7 +329,13 @@ export async function performScavenge(
     const judge = advanceTurn(state);
     if (judge) evaluateJudgementSync(state);
 
-    state.lastActionLog = { subjectId: playerId, text: `Scavenged from the ${source} pile` };
+    // Update the action log based on who was targeted
+    let logText = `Scavenged from the ${source} pile`;
+    if (source === 'opponent') {
+        logText = `Scavenged a card from ${getPlayerName(state, targetPlayerId!)}'s hand`;
+    }
+
+    state.lastActionLog = { subjectId: playerId, text: logText };
     await saveDropState(channelId, state);
     return true;
 }
@@ -575,7 +611,7 @@ async function resolveSmuggle(state: DropGameState, challengerId?: string) {
         const loser = toldTruth ? accuser : smuggler;
         const winner = toldTruth ? smuggler : accuser;
 
-        // The LOSER suffers the consequence of the actual dropped card's rank
+        // The loser suffers the consequence of the actual dropped card's rank
         switch (smuggle.actualCard.rank) {
             case 'Baron':
                 // Loser matches the current value of the pot
@@ -618,6 +654,7 @@ async function resolveSmuggle(state: DropGameState, challengerId?: string) {
         return;
     } else {
         // Unchallenged: card goes face down to the fallen pile
+        smuggle.actualCard.isRevealed = false;
         state.fallenPile.push(smuggle.actualCard);
 
         // Transition from Smuggle to Decree phase

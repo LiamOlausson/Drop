@@ -57,7 +57,8 @@ export default async (req: RoboRequest) => {
                         success = await startHand(channelId, payload?.anteAmount || 10);
                         break;
                     case 'Scavenge':
-                        success = await performScavenge(channelId, userId, payload.cardId, payload.source);
+                        // UPDATE THIS: Pass the new targetPlayerId and targetCardId
+                        success = await performScavenge(channelId, userId, payload.cardId, payload.source, payload.targetPlayerId, payload.targetCardId);
                         break;
                     case 'Dive':
                         success = await performDive(channelId, userId, payload?.discardIds || []);

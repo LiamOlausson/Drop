@@ -126,7 +126,6 @@ export interface DropGameState {
     baseAnte: number;
     currentAnteToCall: number; // The current highest bet that players must match to stay in
     startingBalance: number;  // The initial balance each player gets when the lobby is created
-    roundNumber: number;      // Increments each hand
 
     // Turn Management
     turnOrder: string[];

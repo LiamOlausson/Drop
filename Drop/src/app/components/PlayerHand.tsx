@@ -42,7 +42,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                     transition: 'all 0.3s ease',
                 }}>
 
-                {/* Innner wrapper to elevates the content above the spinning background */}
+                {/* Inner wrapper to elevates the content above the spinning background */}
                 <div className={isActiveTurn ? "active-player-content" : ""} style={{ display: 'flex', flexDirection: 'column' }}>
 
                     {/* Name + score + balance row */}
@@ -101,7 +101,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                         <div style={{
                             marginTop: 4, fontFamily: 'Crimson Pro, serif', fontStyle: 'italic',
                             fontSize: 10, color: 'rgba(201,173,135,0.4)', textAlign: 'right',
-                        }}>{player.totalContribution} total inside</div>
+                        }}>{player.totalContribution} invested</div>
                     )}
                 </div>
             </div>
@@ -174,7 +174,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                     fontFamily: 'Crimson Pro, serif', fontStyle: 'italic',
                     fontSize: 11, color: 'rgba(201,173,135,0.5)',
                 }}>
-                    {player.totalContribution} total inside
+                    {player.totalContribution} invested
                 </div>
             )}
 

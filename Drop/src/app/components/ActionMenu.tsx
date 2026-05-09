@@ -5,7 +5,7 @@ import type { DropGameState, ActionType } from '../../game/types';
 interface ActionMenuProps {
     gameState: DropGameState;
     playerId: string;
-    playerNames: Record<string, string>;  // FIX 5
+    playerNames: Record<string, string>;
     onAction: (action: ActionType | 'PassSmuggle' | 'ChallengeSmuggle' | 'RespondAscend', payload?: any) => void;
 }
 
@@ -26,7 +26,8 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({ gameState, playerId, pla
     const [selectedCardId, setSelectedCardId] = useState<string>('');
     const [diveCardIds, setDiveCardIds]       = useState<string[]>([]);
     const [raiseAmount, setRaiseAmount]       = useState<number>(5);
-    const [raiseInput, setRaiseInput]         = useState<string>('5'); // FIX 6
+    const [raiseInput, setRaiseInput]         = useState<string>('5');
+    const [scavengeTarget, setScavengeTarget] = useState<string>('discard');
 
     const isMyTurn = gameState.turnOrder[gameState.currentTurnIndex] === playerId;
     const player   = gameState.players[playerId];
@@ -45,7 +46,7 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({ gameState, playerId, pla
         setRaiseInput('5');
     };
 
-    // FIX 6: sync raise helpers
+    // sync raise helpers
     const setRaise = (v: number) => {
         const clamped = Math.max(1, Math.min(v, player.balance));
         setRaiseAmount(clamped);
@@ -356,17 +357,45 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({ gameState, playerId, pla
                             ))}
                         </select>
                     </Field>
-                    <Field label="Take from:">
-                        <select id="scavenge-source" defaultValue="discard">
-                            <option value="discard">Top of Discard Pile</option>
-                            <option value="fallen">Top of Fallen Pile</option>
+                    <Field label="Target Card to Draw:">
+                        <select value={scavengeTarget} onChange={e => setScavengeTarget(e.target.value)}>
+                            {gameState.discardPile.length > 0 && <option value="discard">Top of Discard Pile</option>}
+                            {gameState.fallenPile.length > 0 && <option value="fallen">Top of Fallen Pile</option>}
+
+                            {/* Dynamically list every revealed card from every active opponent */}
+                            {opponents.map(id => {
+                                const p = gameState.players[id];
+                                if (p.isDead || p.hasFolded) return null;
+                                return p.hand.filter(c => c.isRevealed).map(c => (
+                                    <option key={c.id} value={`opponent|${id}|${c.id}`}>
+                                        {c.name} ({c.rank}) from {getName(id)}
+                                    </option>
+                                ));
+                            })}
                         </select>
                     </Field>
+
                     <div style={rowStyle}>
-                        <TavernBtn color="candle" disabled={!selectedCardId} onClick={() => {
-                            const src = (document.getElementById('scavenge-source') as HTMLSelectElement).value;
-                            onAction('Scavenge', { cardId: selectedCardId, source: src }); back();
-                        }}>Confirm</TavernBtn>
+                        <TavernBtn color="rust" disabled={!selectedCardId || !scavengeTarget} onClick={() => {
+                            // Parse the combined string value from the dropdown
+                            let source = scavengeTarget;
+                            let targetPlayerId, targetCardId;
+
+                            if (scavengeTarget.startsWith('opponent|')) {
+                                const parts = scavengeTarget.split('|');
+                                source = 'opponent';
+                                targetPlayerId = parts[1];
+                                targetCardId = parts[2];
+                            }
+
+                            onAction('Scavenge', {
+                                cardId: selectedCardId,
+                                source,
+                                targetPlayerId,
+                                targetCardId
+                            });
+                            back();
+                        }}>Scavenge</TavernBtn>
                         <BackLink onClick={back} />
                     </div>
                 </div>
@@ -406,7 +435,7 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({ gameState, playerId, pla
                 </div>
             )}
 
-            {/* ASCEND — FIX 6: input + all-in */}
+            {/* Ascend (input + all-in) */}
             {selectedAction === 'Ascend' && (
                 <div style={formStyle}>
                     <p style={descStyle}>Raise the stakes. Others must call or fold.</p>
@@ -620,7 +649,6 @@ const ActionTile: React.FC<{ action: typeof ACTIONS[0]; onClick: () => void }> =
     </button>
 );
 
-/* FIX 6: Enhanced AscendInput with text field and all-in button */
 const AscendInput: React.FC<{
     value: number;
     inputValue: string;

@@ -23,7 +23,7 @@ export const Activity = () => {
 
     if (!isReady || !userId) {
         return (
-            // FIX 7: loading screen also viewport-locked
+            // loading screen also viewport-locked
             <div style={{
                 position: 'fixed', inset: 0,
                 display: 'flex', flexDirection: 'column',

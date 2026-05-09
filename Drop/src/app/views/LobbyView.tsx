@@ -125,7 +125,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({ channelName, executeAction
                         onChange={e => setPlayerTracking(e.target.checked)}
                         style={{ accentColor: '#f0c040', width: 16, height: 16 }}
                     />
-                    Save Balances & Discord Names
+                    Canonical Version
                 </label>
             </div>
 
@@ -135,7 +135,7 @@ export const LobbyView: React.FC<LobbyViewProps> = ({ channelName, executeAction
             }}>
                 <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg, transparent, rgba(240,192,64,0.15))' }} />
                 <span style={{ fontFamily: 'Crimson Pro, serif', fontStyle: 'italic', fontSize: 11, color: 'rgba(201,173,135,0.25)', letterSpacing: 2 }}>
-                    <span style={{ cursor: 'pointer' }} onClick={onOpenAdmin}>🔒</span> TOWER OF LUCK
+                    <span style={{ cursor: 'pointer' }} onClick={onOpenAdmin}>🔒</span> Scavengers Leap
                 </span>
                 <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg, rgba(240,192,64,0.15), transparent)' }} />
             </div>
