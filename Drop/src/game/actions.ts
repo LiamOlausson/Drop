@@ -3,14 +3,25 @@ import { getDropState, saveDropState } from './state';
 import { getShuffledDeck } from './deck';
 import type {CardRank, DropGameState, HandResult, PlayerState} from './types';
 
-// ---------------------------------------------------------------------------
-// PHASE TRANSITION HELPERS
-// ---------------------------------------------------------------------------
+// --------------------------------------------------------------
+// Helper functions
+// --------------------------------------------------------------
 
+
+/**
+ * Helper to get all active players
+ */
 function getActivePlayers(state: DropGameState): string[] {
     return state.turnOrder.filter(
         id => !state.players[id].isDead && !state.players[id].hasFolded
     );
+}
+
+/**
+ * Helper to safely look up a player's display name or fallback to a short ID
+ */
+function getPlayerName(state: DropGameState, playerId: string): string {
+    return state.assignedNames?.[playerId] || playerId.substring(0, 10) + '…';
 }
 
 /**
@@ -181,7 +192,7 @@ function evaluateJudgementSync(state: DropGameState): void {
 }
 
 // ---------------------------------------------------------------------------
-// SETUP
+// Setup functions
 // ---------------------------------------------------------------------------
 
 export async function startHand(channelId: string, anteAmount: number): Promise<boolean> {
@@ -204,6 +215,9 @@ export async function startHand(channelId: string, anteAmount: number): Promise<
         state.pendingSmuggle = undefined;
     }
 
+    // Save the chosen ante for the next round's default
+    state.baseAnte = anteAmount;
+
     // Reset handResult and hand state for each player
     for (const playerId of state.turnOrder) {
         const player = state.players[playerId];
@@ -211,6 +225,7 @@ export async function startHand(channelId: string, anteAmount: number): Promise<
         player.hasFolded   = false;
         player.cannotBeBaron = false;
         player.antePaid    = anteAmount;
+        player.totalContribution = anteAmount;
         player.hand        = [];
         player.handResult  = undefined; // clear previous round result
 
@@ -244,6 +259,7 @@ export async function startHand(channelId: string, anteAmount: number): Promise<
     state.turnsInCurrentRound = 0;
     state.handResults         = undefined;
     state.whispers            = [];
+    state.lastActionLog       = undefined;
 
     await saveDropState(channelId, state);
     return true;
@@ -283,6 +299,7 @@ export async function performScavenge(
     const judge = advanceTurn(state);
     if (judge) evaluateJudgementSync(state);
 
+    state.lastActionLog = { subjectId: playerId, text: `Scavenged from the ${source} pile` };
     await saveDropState(channelId, state);
     return true;
 }
@@ -304,7 +321,7 @@ export async function performDive(
     if (player.balance < cost) return false;
 
     player.balance  -= cost;
-    player.antePaid += cost;
+    player.totalContribution += cost;
     state.pot       += cost;
 
     const discarded = player.hand.filter(c => discardIds.includes(c.id));
@@ -323,6 +340,7 @@ export async function performDive(
     const judge = advanceTurn(state);
     if (judge) evaluateJudgementSync(state);
 
+    state.lastActionLog = { subjectId: playerId, text: 'Dove into the sump for new cards' };
     await saveDropState(channelId, state);
     return true;
 }
@@ -347,16 +365,18 @@ export async function performAscend(
     const player = state.players[playerId];
     if (player.balance < raiseAmount) return false; // can't bet what you don't have
 
-    player.balance          -= raiseAmount;
-    player.antePaid         += raiseAmount;
-    state.pot               += raiseAmount;
-    state.currentAnteToCall += raiseAmount;
+    player.balance           -= raiseAmount;
+    player.antePaid          += raiseAmount;
+    player.totalContribution += raiseAmount;
+    state.pot                += raiseAmount;
+    state.currentAnteToCall  += raiseAmount;
 
     state.pendingAscend = {
         initiatorId: playerId,
-        playersResponded: [playerId] // initiator already "responded"
+        playersResponded: [playerId] // initiator already responded
     };
 
+    state.lastActionLog = { subjectId: playerId, text: `Ascended (+${raiseAmount} 🪙)` };
     await saveDropState(channelId, state);
     return true;
 }
@@ -379,6 +399,7 @@ export async function respondToAscend(
             } else {
                 player.balance  -= amountToCall;
                 player.antePaid += amountToCall;
+                player.totalContribution += amountToCall;
                 state.pot       += amountToCall;
             }
         }
@@ -401,6 +422,7 @@ export async function respondToAscend(
         if (judge) evaluateJudgementSync(state);
     }
 
+    state.lastActionLog = { subjectId: playerId, text: response === 'Call' ? 'Climbed' : 'Went to the Bridge' };
     await saveDropState(channelId, state);
     return true;
 }
@@ -425,6 +447,7 @@ export async function performSnitch(
     const judge = advanceTurn(state);
     if (judge) evaluateJudgementSync(state);
 
+    state.lastActionLog = { subjectId: playerId, text: `Snitched on ${getPlayerName(state, targetId)}` };
     await saveDropState(channelId, state);
     return true;
 }
@@ -463,6 +486,7 @@ export async function performSabotage(
     const judge = advanceTurn(state);
     if (judge) evaluateJudgementSync(state);
 
+    state.lastActionLog = { subjectId: playerId, text: `Sabotaged ${getPlayerName(state, targetId)}` };
     await saveDropState(channelId, state);
     return true;
 }
@@ -491,6 +515,7 @@ export async function performSmuggle(
         status: 'WaitingForResponses'
     };
 
+    state.lastActionLog = { subjectId: playerId, text: `Smuggled a ${declaredRank}` };
     await saveDropState(channelId, state);
     return true;
 }
@@ -512,7 +537,7 @@ export async function passSmuggle(channelId: string, playerId: string): Promise<
         smuggle.status = 'ResolvingDecree';
         await resolveSmuggle(state);
     }
-
+    state.lastActionLog = { subjectId: playerId, text: `Let the smuggle go through` };
     await saveDropState(channelId, state);
 }
 
@@ -527,6 +552,7 @@ export async function challengeSmuggle(channelId: string, challengerId: string):
     state.pendingSmuggle.status = 'ResolvingChallenge';
 
     await resolveSmuggle(state, challengerId);
+    state.lastActionLog = { subjectId: challengerId, text: `Challenged the Smuggle` };
     await saveDropState(channelId, state);
 }
 
@@ -553,9 +579,9 @@ async function resolveSmuggle(state: DropGameState, challengerId?: string) {
         switch (smuggle.actualCard.rank) {
             case 'Baron':
                 // Loser matches the current value of the pot
-                loser.balance  -= state.pot;
-                loser.antePaid += state.pot;
-                state.pot      *= 2;
+                loser.balance -= state.pot;
+                loser.totalContribution += state.pot;
+                state.pot *= 2;
                 break;
             case 'Warden': {
                 // Loser must discard all baron cards in their hand then redraw
@@ -574,8 +600,8 @@ async function resolveSmuggle(state: DropGameState, challengerId?: string) {
             case 'Citizen': {
                 // Loser pays an ante directly to the winner
                 const payment = Math.min(loser.balance, state.currentAnteToCall);
-                loser.balance   -= payment;
-                winner.balance  += payment;
+                loser.balance -= payment;
+                winner.balance += payment;
                 break;
             }
             case 'Glow Worm':
@@ -629,10 +655,7 @@ async function resolveSmuggle(state: DropGameState, challengerId?: string) {
     }
 }
 
-// ===========================================================================
-// DECREE STUBS
-// ===========================================================================
-
+// Decree Handling
 export async function executeDecreeBaron(channelId: string, smugglerId: string, targetId: string) {
     const state = await getDropState(channelId);
     if (!state || !state.pendingDecree) return false;
@@ -661,6 +684,7 @@ export async function executeDecreeBaron(channelId: string, smugglerId: string, 
     const judge = advanceTurn(state);
     if (judge) evaluateJudgementSync(state);
 
+    state.lastActionLog = { subjectId: smugglerId, text: `Executed the Baron's Decree on ${getPlayerName(state, targetId)}` };
     await saveDropState(channelId, state);
     return true;
 }
@@ -699,6 +723,7 @@ export async function executeDecreeWarden(channelId: string, smugglerId: string,
     const judge = advanceTurn(state);
     if (judge) evaluateJudgementSync(state);
 
+    state.lastActionLog = { subjectId: smugglerId, text: `Executed the Warden's Decree on ${getPlayerName(state, targetId)}` };
     await saveDropState(channelId, state);
     return true;
 }
@@ -742,6 +767,7 @@ export async function executeDecreeCitizen(
     const judge = advanceTurn(state);
     if (judge) evaluateJudgementSync(state);
 
+    state.lastActionLog = { subjectId: smugglerId, text: `Executed the Citizen's Decree` };
     await saveDropState(channelId, state);
     return true;
 }
@@ -765,7 +791,7 @@ export async function executeDecreeGlowWorm(channelId: string, smugglerId: strin
     // Deduct standard base ante (10 coins) from the target
     const payment = Math.min(target.balance, state.currentAnteToCall);
     target.balance -= payment;
-    target.antePaid += payment;
+    target.totalContribution += payment;
     state.pot += payment;
 
     // Clean up the pending decree state and advance the turn
@@ -774,6 +800,7 @@ export async function executeDecreeGlowWorm(channelId: string, smugglerId: strin
     const judge = advanceTurn(state);
     if (judge) evaluateJudgementSync(state);
 
+    state.lastActionLog = { subjectId: smugglerId, text: `Executed the Glow Worm's Decree on ${getPlayerName(state, targetId)}` };
     await saveDropState(channelId, state);
     return true;
 }
@@ -808,6 +835,72 @@ export async function executeDecreeHollow(channelId: string, smugglerId: string,
 
     const judge = advanceTurn(state);
     if (judge) evaluateJudgementSync(state);
+
+    state.lastActionLog = { subjectId: smugglerId, text: `Executed the Hollow One's Decree on ${getPlayerName(state, targetId)}` };
+    await saveDropState(channelId, state);
+    return true;
+}
+
+// Kick players
+export async function kickPlayer(channelId: string, hostId: string, targetId: string) {
+    const state = await getDropState(channelId);
+    if (!state || state.hostId !== hostId) return false;
+
+    const target = state.players[targetId];
+    if (!target) return false;
+
+    // Mark them dead
+    target.isDead = true;
+
+    // Set the flag forcing the table to close
+    state.forceLobby = true;
+
+    // Announce the kick in whispers
+    if (!state.whispers) state.whispers = [];
+    state.whispers.push({ subjectId: targetId, text: "was kicked by the Host. The table will close." });
+
+    // Resolve any pending asynchronous blocks they might be holding up
+    if (state.pendingAscend && !state.pendingAscend.playersResponded.includes(targetId)) {
+        state.pendingAscend.playersResponded.push(targetId);
+
+        const activePlayers = state.turnOrder.filter(
+            id => !state.players[id].isDead && !state.players[id].hasFolded
+        );
+        const allResponded = activePlayers.every(
+            id => state.pendingAscend!.playersResponded.includes(id)
+        );
+
+        if (allResponded) {
+            state.pendingAscend = undefined;
+            const judge = advanceTurn(state);
+            if (judge) evaluateJudgementSync(state);
+        }
+    }
+
+    if (state.pendingSmuggle && state.pendingSmuggle.status === 'WaitingForResponses') {
+        if (!state.pendingSmuggle.playersPassed.includes(targetId) && !state.pendingSmuggle.playersChallenged.includes(targetId)) {
+            state.pendingSmuggle.playersPassed.push(targetId);
+
+            const others = getActivePlayers(state).filter(id => id !== state.pendingSmuggle!.smugglerId);
+            if (state.pendingSmuggle.playersPassed.length >= others.length) {
+                state.pendingSmuggle.status = 'ResolvingDecree';
+                await resolveSmuggle(state); // Safely resolves the smuggle
+            }
+        }
+    }
+
+    // If it was specifically their turn during the standard phase, advance it
+    if (
+        state.phase !== 'Setup' &&
+        state.phase !== 'Judgement' &&
+        !state.pendingAscend &&
+        !state.pendingSmuggle &&
+        !state.pendingDecree &&
+        state.turnOrder[state.currentTurnIndex] === targetId
+    ) {
+        const judge = advanceTurn(state);
+        if (judge) evaluateJudgementSync(state);
+    }
 
     await saveDropState(channelId, state);
     return true;

@@ -7,7 +7,7 @@ import {
     performSnitch, performSabotage, performSmuggle,
     passSmuggle, challengeSmuggle, respondToAscend,
     executeDecreeHollow, executeDecreeGlowWorm, executeDecreeCitizen,
-    executeDecreeWarden, executeDecreeBaron
+    executeDecreeWarden, executeDecreeBaron, kickPlayer
 } from '../../game/actions.js';
 
 // In-memory Mutex to prevent state-overwrite race conditions
@@ -97,6 +97,9 @@ export default async (req: RoboRequest) => {
                         } else if (payload.decreeType === 'Baron') {
                             success = await executeDecreeBaron(channelId, userId, payload.targetId);
                         }
+                        break;
+                    case 'KickPlayer':
+                        success = await kickPlayer(channelId, userId, payload.targetId);
                         break;
                     default:
                         resolve(RoboResponse.json({ error: 'Unknown action type' }, { status: 400 }));

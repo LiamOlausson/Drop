@@ -38,7 +38,7 @@
     --shadow-blood: 0 0 20px rgba(139,26,26,0.4);
 }
 
-/* FIX 7: Prevent all scrolling at the document level */
+/* Prevent all scrolling at the document level */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 html {
@@ -147,6 +147,41 @@ select:focus, input:focus { border-color: var(--candle); }
     background: linear-gradient(90deg, transparent, var(--wood), transparent);
 }
 
+.active-player-panel {
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 0 15px rgba(240, 192, 64, 0.15); /* Adds a soft ambient glow outside the card */
+}
+
+/* The spinning gradient layer */
+.active-player-panel::before {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 200%; height: 200%;
+    background: conic-gradient(from 0deg, transparent 30%, rgba(240, 192, 64, 0.15) 75%, rgba(240, 192, 64, 0.8) 100%);
+    animation: spin-glow 8s linear infinite;
+    z-index: 0;
+}
+
+/* The inner mask that turns the spin into a border */
+.active-player-panel::after {
+    content: '';
+    position: absolute;
+    inset: 1.5px; /* The thickness of the glowing border */
+    background: linear-gradient(160deg, #1e150f 0%, #110c08 100%);
+    border-radius: 6px;
+    z-index: 0;
+}
+
+/* Keeps the text and cards above the glow background */
+.active-player-content {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+}
+
 /* ── Animations ── */
 @keyframes flicker {
     0%, 100% { opacity: 1; }
@@ -171,4 +206,9 @@ select:focus, input:focus { border-color: var(--candle); }
 @keyframes cardDeal {
     from { opacity: 0; transform: translateY(-20px) rotate(-3deg) scale(0.92); }
     to   { opacity: 1; transform: translateY(0) rotate(0deg) scale(1); }
+}
+
+@keyframes spin-glow {
+    0% { transform: translate(-50%, -50%) rotate(0deg); }
+    100% { transform: translate(-50%, -50%) rotate(360deg); }
 }

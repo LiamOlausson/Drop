@@ -22,10 +22,10 @@ export const JudgementView: React.FC<JudgementViewProps> = ({ gameState, userId,
     const getName  = (id: string) => gameState.assignedNames?.[id] || playerNames[id] || id.substring(0, 10) + '…';
     const isHost = gameState.hostId === userId || (!gameState.hostId && gameState.turnOrder[0] === userId);
     const isLeader = gameState.turnOrder[gameState.handLeaderIndex] === userId;
-    const [anteAmount, setAnteAmount] = useState<number>(10);
+    const [anteAmount, setAnteAmount] = useState<number>(gameState.baseAnte || 10);
 
     return (
-        // FIX 7: viewport-locked, inner content scrolls
+        // viewport-locked, inner content scrolls
         <div style={{
             position: 'fixed', inset: 0,
             display: 'flex', flexDirection: 'column',
@@ -159,7 +159,7 @@ export const JudgementView: React.FC<JudgementViewProps> = ({ gameState, userId,
                         <input
                             type="number"
                             value={anteAmount}
-                            min={1}
+                            min={0}
                             onChange={e => setAnteAmount(parseInt(e.target.value) || 1)}
                             style={{
                                 width: 70, textAlign: 'center',
@@ -173,7 +173,7 @@ export const JudgementView: React.FC<JudgementViewProps> = ({ gameState, userId,
 
                     <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
                         {/* Allow Leader or Host to start the next hand */}
-                        {(isHost || isLeader) && (
+                        {(isHost || isLeader) && !gameState.forceLobby && (
                             <button
                                 onClick={() => executeAction('StartHand', { anteAmount })}
                                 style={{
@@ -187,6 +187,16 @@ export const JudgementView: React.FC<JudgementViewProps> = ({ gameState, userId,
                                 onMouseOver={e => { e.currentTarget.style.background = 'rgba(240,192,64,0.22)'; }}
                                 onMouseOut={e  => { e.currentTarget.style.background = 'rgba(240,192,64,0.12)'; }}
                             >🃏 Deal Next Hand</button>
+                        )}
+
+                        {/* Closure warning */}
+                        {gameState.forceLobby && (
+                            <span style={{
+                                fontFamily: 'Cinzel, serif', color: '#e05050', fontSize: 14,
+                                alignSelf: 'center', fontWeight: 700, padding: '10px 0'
+                            }}>
+                                ⚠ Table closed by Host.
+                            </span>
                         )}
 
                         {/* Restrict to Host and use ReturnToLobby */}

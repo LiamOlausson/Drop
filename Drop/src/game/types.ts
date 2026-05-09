@@ -26,7 +26,8 @@ export interface Card {
 export interface PlayerState {
     id: string; // Discord User ID
     hand: Card[];
-    antePaid: number; // Tracks how much this player has put into the pot this hand
+    antePaid: number; // Strictly tracks bets to match the current round
+    totalContribution: number; // Tracks total money put into the pot (bets + fees)
     balance: number;  // Running coin balance for this lobby session
     isDead: boolean; // True if eliminated via Hollow consequence or Opposing Barons Clause
     hasFolded: boolean; // True if they went to the bridge (folded) during an Ascend action
@@ -120,7 +121,9 @@ export interface PendingDecreeState {
  * The root object synced across all clients via Robo.js Sync / Flashcore.
  */
 export interface DropGameState {
+    // Table Stats
     pot: number;
+    baseAnte: number;
     currentAnteToCall: number; // The current highest bet that players must match to stay in
     startingBalance: number;  // The initial balance each player gets when the lobby is created
     roundNumber: number;      // Increments each hand
@@ -144,6 +147,7 @@ export interface DropGameState {
     phase: TurnPhase;
     handResults?: HandResult[]; // Populated after Judgement; cleared at start of next hand
     pendingAscend?: AscendChallengeState;
+    lastActionLog?: { subjectId: string; text: string; };
 
     // Smuggle Action
     pendingSmuggle?: SmuggleChallengeState;
@@ -156,4 +160,5 @@ export interface DropGameState {
 
     // Dev/Admin/Host
     hostId: string;
+    forceLobby?: boolean;
 }

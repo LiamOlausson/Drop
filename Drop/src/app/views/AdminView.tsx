@@ -73,7 +73,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ onClose }) => {
                 display: 'flex', flexDirection: 'column', gap: 20
             }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <h2 style={{ fontFamily: 'Cinzel, serif', color: '#c0392b', margin: 0 }}>Superadmin Oversight</h2>
+                    <h2 style={{ fontFamily: 'Cinzel, serif', color: '#c0392b', margin: 0 }}>The Solarium</h2>
                     <button onClick={onClose} style={{
                         background: 'transparent', border: 'none', color: 'rgba(201,173,135,0.5)',
                         cursor: 'pointer', fontFamily: 'Cinzel, serif', fontSize: 16

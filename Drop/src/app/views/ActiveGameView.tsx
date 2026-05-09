@@ -19,10 +19,11 @@ export const ActiveGameView: React.FC<ActiveGameViewProps> = ({ gameState, userI
     const isSetup = gameState.phase === 'Setup';
     const isLeader = gameState.turnOrder[gameState.handLeaderIndex] === userId;
     const isHost = gameState.hostId === userId || (!gameState.hostId && gameState.turnOrder[0] === userId);
-    const [anteAmount, setAnteAmount] = useState<number>(10);
+    const [anteAmount, setAnteAmount] = useState<number>(gameState.baseAnte || 10);
     const getName = (id: string) => gameState.assignedNames?.[id] || playerNames[id] || id.substring(0, 10) + '…';
+    const [isKickMenuOpen, setIsKickMenuOpen] = useState(false);
 
-    // FIX 7: Entire layout is viewport-locked, no scrolling
+    // Entire layout is viewport-locked, no scrolling
     return (
         <div style={{
             position: 'fixed', inset: 0,
@@ -32,6 +33,16 @@ export const ActiveGameView: React.FC<ActiveGameViewProps> = ({ gameState, userI
             padding: 'env(safe-area-inset-top, 16px) env(safe-area-inset-right, 16px) env(safe-area-inset-bottom, 24px) env(safe-area-inset-left, 16px)',
             boxSizing: 'border-box'
         }}>
+            {/* Table Closure Banner */}
+            {gameState.forceLobby && (
+                <div style={{
+                    background: 'rgba(139,26,26,0.9)', color: '#f5ead0', textAlign: 'center',
+                    padding: '4px 0', fontFamily: 'Cinzel, serif', letterSpacing: 2, fontSize: 12,
+                    borderBottom: '1px solid #c0392b', flexShrink: 0
+                }}>
+                    ⚠ TABLE CLOSING AFTER CURRENT HAND ⚠
+                </div>
+            )}
             {/* ── Top Header Bar ── */}
             <div style={{
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
@@ -184,6 +195,15 @@ export const ActiveGameView: React.FC<ActiveGameViewProps> = ({ gameState, userI
                                     </div>
                                 )}
 
+                                {/* Setup phase closure warning */}
+                                {gameState.forceLobby && isSetup && (
+                                    <p style={{
+                                        fontFamily: 'Cinzel, serif', fontSize: 14, color: '#e05050', flex: 1, textAlign: 'center'
+                                    }}>
+                                        ⚠ Table marked for closure. Use 'Return to Lobby'.
+                                    </p>
+                                )}
+
                                 {/* Waiting message only shows if you aren't the leader AND aren't the host */}
                                 {isPlayerInGame && !isLeader && !isHost && (
                                     <p style={{
@@ -208,7 +228,7 @@ export const ActiveGameView: React.FC<ActiveGameViewProps> = ({ gameState, userI
                 {/* ── Active Game Layout ── */}
                 {!isSetup && (
                     <>
-                        {/* NEW: Left panel = Whispers Log */}
+                        {/* Left panel = Whispers Log */}
                         <div style={{
                             width: 200,
                             borderRight: '1px solid rgba(60,46,30,0.6)',
@@ -217,6 +237,34 @@ export const ActiveGameView: React.FC<ActiveGameViewProps> = ({ gameState, userI
                             overflow: 'hidden',
                             flexShrink: 0,
                         }}>
+                            {/* Last Action Box */}
+                            <div style={{
+                                padding: '12px',
+                                borderBottom: '1px solid rgba(60,46,30,0.5)',
+                                background: 'rgba(26,20,16,0.6)',
+                                flexShrink: 0,
+                                display: 'flex', flexDirection: 'column', gap: 4
+                            }}>
+                                <span style={{
+                                    fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 3,
+                                    color: 'rgba(240,192,64,0.4)', textTransform: 'uppercase',
+                                }}>Last Action</span>
+
+                                {gameState.lastActionLog ? (
+                                    <div style={{ fontFamily: 'Crimson Pro, serif', fontSize: 14, color: 'rgba(201,173,135,0.8)', lineHeight: 1.3 }}>
+                                        <strong style={{ color: '#f0c040' }}>{getName(gameState.lastActionLog.subjectId)}</strong>
+                                        <br />
+                                        <span style={{ fontStyle: 'italic', color: 'rgba(201,173,135,0.6)', fontSize: 13 }}>
+                                            {gameState.lastActionLog.text}
+                                        </span>
+                                    </div>
+                                ) : (
+                                    <span style={{ fontFamily: 'Crimson Pro, serif', fontStyle: 'italic', fontSize: 13, color: 'rgba(201,173,135,0.3)' }}>
+                                        The table is waiting...
+                                    </span>
+                                )}
+                            </div>
+                            {/* Whispers Header */}
                             <div style={{
                                 padding: '10px 12px 8px',
                                 borderBottom: '1px solid rgba(60,46,30,0.5)',
@@ -251,7 +299,57 @@ export const ActiveGameView: React.FC<ActiveGameViewProps> = ({ gameState, userI
                             alignItems: 'center', overflow: 'hidden',
                             padding: '12px 12px 0',
                             gap: 10,
+                            position: 'relative'
                         }}>
+                            {/* Expandable Admin Kick Menu */}
+                            {isHost && opponents.length > 0 && (
+                                <div style={{
+                                    position: 'absolute', top: 12, left: 12,
+                                    display: 'flex', flexDirection: 'column', gap: 6,
+                                    zIndex: 20
+                                }}>
+                                    <button
+                                        onClick={() => setIsKickMenuOpen(!isKickMenuOpen)}
+                                        style={{
+                                            background: 'rgba(13,10,7,0.8)', border: '1px solid rgba(192,57,43,0.5)',
+                                            color: '#e05050', fontSize: 11, fontFamily: 'Cinzel, serif',
+                                            padding: '6px 12px', borderRadius: 6, cursor: 'pointer',
+                                            textTransform: 'uppercase', letterSpacing: 1,
+                                            alignSelf: 'flex-start',
+                                            boxShadow: '0 4px 12px rgba(0,0,0,0.5)'
+                                        }}
+                                    >
+                                        {isKickMenuOpen ? 'Close Panel' : 'Admin Panel'}
+                                    </button>
+
+                                    {isKickMenuOpen && (
+                                        <div style={{
+                                            background: 'rgba(26,20,16,0.95)', border: '1px solid rgba(192,57,43,0.5)',
+                                            borderRadius: 8, padding: '10px', display: 'flex', flexDirection: 'column', gap: 8,
+                                            boxShadow: '0 8px 24px rgba(0,0,0,0.7)',
+                                            minWidth: 160
+                                        }}>
+                                            <span style={{ fontFamily: 'Cinzel, serif', fontSize: 9, color: 'rgba(201,173,135,0.6)', letterSpacing: 1, textTransform: 'uppercase', borderBottom: '1px solid rgba(192,57,43,0.3)', paddingBottom: 4 }}>Manage Players</span>
+                                            {opponents.map(id => (
+                                                <div key={id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+                                                    <span style={{ fontFamily: 'Cinzel, serif', fontSize: 12, color: '#c9ad87' }}>{getName(id)}</span>
+                                                    <button
+                                                        onClick={() => executeAction('KickPlayer', { targetId: id })}
+                                                        style={{
+                                                            background: 'rgba(139,26,26,0.9)', border: '1px solid #c0392b',
+                                                            color: '#f5ead0', fontSize: 10, borderRadius: 4,
+                                                            cursor: 'pointer', padding: '2px 8px', fontFamily: 'Cinzel, serif'
+                                                        }}
+                                                    >
+                                                        KICK
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
                             {/* Game Board */}
                             <div style={{ flexShrink: 0, width: '100%', display: 'flex', justifyContent: 'center' }}>
                                 <GameBoard gameState={gameState} />

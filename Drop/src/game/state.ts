@@ -23,6 +23,7 @@ export async function initializeGame(channelId: string, hostId: string, playerTr
 
     const initialState: DropGameState = {
         pot: 0,
+        baseAnte: 10,
         currentAnteToCall: 0,
         startingBalance: DEFAULT_STARTING_BALANCE,
         roundNumber: 1,
@@ -134,6 +135,7 @@ export async function joinGame(channelId: string, userId: string, userName?: str
         id: userId,
         hand: [],
         antePaid: 0,
+        totalContribution: 0,
         balance: startingBalance,
         isDead: false,
         hasFolded: false,

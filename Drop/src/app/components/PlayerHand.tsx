@@ -7,8 +7,8 @@ interface PlayerHandProps {
     player: PlayerState;
     isCurrentPlayer: boolean;
     isActiveTurn?: boolean;
-    displayName?: string;  // FIX 5: human-readable name
-    compact?: boolean;     // FIX 4: compact mode for side panel
+    displayName?: string;
+    compact?: boolean;
 }
 
 const RESULT_CONFIG = {
@@ -30,76 +30,80 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
     /* ── Compact version for side panel ── */
     if (compact) {
         return (
-            <div style={{
-                padding: '8px 10px',
-                background: isActiveTurn
-                    ? 'linear-gradient(160deg, rgba(240,192,64,0.08) 0%, rgba(30,20,16,0.9) 100%)'
-                    : 'rgba(26,20,16,0.7)',
-                border: isActiveTurn
-                    ? '1px solid rgba(240,192,64,0.4)'
-                    : '1px solid rgba(60,46,30,0.6)',
-                borderRadius: 8,
-                opacity: isOut && !player.handResult ? 0.4 : 1,
-                transition: 'all 0.3s ease',
-            }}>
-                {/* Name + balance row */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', marginBottom: 6, gap: 4 }}>
-                    <span style={{
-                        fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 0.5,
-                        color: isActiveTurn ? '#f0c040' : '#c9ad87',
-                        fontWeight: isActiveTurn ? 700 : 400,
-                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                    }}>
-                        {isActiveTurn && '▶ '}{name}
-                    </span>
-                    <span style={{
-                        fontFamily: 'Cinzel, serif', fontSize: 11, color: '#f0c040', fontWeight: 700, textAlign: 'center'
-                    }}>
-                        {scoreDisplay}
-                    </span>
-                    <span style={{ fontFamily: 'Crimson Pro, serif', fontSize: 12, color: 'rgba(201,173,135,0.7)', textAlign: 'right' }}>
-                        🪙{player.balance}
-                    </span>
-                </div>
+            <div
+                className={isActiveTurn ? "active-player-panel" : ""}
+                style={{
+                    padding: '8px 10px',
+                    // The background and border are handed off to the CSS animation when active
+                    background: isActiveTurn ? 'transparent' : 'rgba(26,20,16,0.7)',
+                    border: isActiveTurn ? '1px solid transparent' : '1px solid rgba(60,46,30,0.6)',
+                    borderRadius: 8,
+                    opacity: isOut && !player.handResult ? 0.4 : 1,
+                    transition: 'all 0.3s ease',
+                }}>
 
-                {/* Status badge */}
-                {result ? (
-                    <div style={{
-                        background: result.bg, color: result.color, padding: '2px 8px',
-                        borderRadius: 3, fontFamily: 'Cinzel, serif', fontSize: 9,
-                        letterSpacing: 0.5, marginBottom: 6, display: 'inline-block',
-                    }}>{result.label}</div>
-                ) : isOut ? (
-                    <div style={{
-                        color: '#6b5e5e', fontFamily: 'Crimson Pro, serif',
-                        fontStyle: 'italic', fontSize: 11, marginBottom: 6,
-                    }}>{player.isDead ? '✝ Out' : '⚑ Folded'}</div>
-                ) : null}
+                {/* Innner wrapper to elevates the content above the spinning background */}
+                <div className={isActiveTurn ? "active-player-content" : ""} style={{ display: 'flex', flexDirection: 'column' }}>
 
-                {/* Cards — hidden face-down, small */}
-                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                    {player.hand.map(card => (
-                        <Card
-                            key={card.id}
-                            card={card}
-                            hidden={!card.isRevealed}
-                            size="sm"
-                        />
-                    ))}
-                    {player.hand.length === 0 && (
-                        <span style={{ fontFamily: 'Crimson Pro, serif', fontStyle: 'italic', color: 'rgba(201,173,135,0.25)', fontSize: 11 }}>
-                            no cards
+                    {/* Name + score + balance row */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', marginBottom: 6, gap: 4 }}>
+                        <span style={{
+                            fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 0.5,
+                            color: isActiveTurn ? '#f0c040' : '#c9ad87',
+                            fontWeight: isActiveTurn ? 700 : 400,
+                            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                        }}>
+                            {isActiveTurn && '▶ '}{name}
                         </span>
+                        <span style={{
+                            fontFamily: 'Cinzel, serif', fontSize: 11, color: '#f0c040', fontWeight: 700, textAlign: 'center'
+                        }}>
+                            {scoreDisplay}
+                        </span>
+                        <span style={{ fontFamily: 'Crimson Pro, serif', fontSize: 12, color: 'rgba(201,173,135,0.7)', textAlign: 'right' }}>
+                            🪙{player.balance}
+                        </span>
+                    </div>
+
+                    {/* Status badge */}
+                    {result ? (
+                        <div style={{
+                            background: result.bg, color: result.color, padding: '2px 8px',
+                            borderRadius: 3, fontFamily: 'Cinzel, serif', fontSize: 9,
+                            letterSpacing: 0.5, marginBottom: 6, display: 'inline-block', alignSelf: 'flex-start'
+                        }}>{result.label}</div>
+                    ) : isOut ? (
+                        <div style={{
+                            color: '#6b5e5e', fontFamily: 'Crimson Pro, serif',
+                            fontStyle: 'italic', fontSize: 11, marginBottom: 6,
+                        }}>{player.isDead ? '✝ Out' : '⚑ Folded'}</div>
+                    ) : null}
+
+                    {/* Cards — hidden face-down, small */}
+                    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                        {player.hand.map(card => (
+                            <Card
+                                key={card.id}
+                                card={card}
+                                hidden={!card.isRevealed}
+                                size="sm"
+                            />
+                        ))}
+                        {player.hand.length === 0 && (
+                            <span style={{ fontFamily: 'Crimson Pro, serif', fontStyle: 'italic', color: 'rgba(201,173,135,0.25)', fontSize: 11 }}>
+                                no cards
+                            </span>
+                        )}
+                    </div>
+
+                    {/* Ante info */}
+                    {player.totalContribution > 0 && (
+                        <div style={{
+                            marginTop: 4, fontFamily: 'Crimson Pro, serif', fontStyle: 'italic',
+                            fontSize: 10, color: 'rgba(201,173,135,0.4)', textAlign: 'right',
+                        }}>{player.totalContribution} total inside</div>
                     )}
                 </div>
-
-                {/* Ante info */}
-                {player.antePaid > 0 && (
-                    <div style={{
-                        marginTop: 4, fontFamily: 'Crimson Pro, serif', fontStyle: 'italic',
-                        fontSize: 10, color: 'rgba(201,173,135,0.4)', textAlign: 'right',
-                    }}>{player.antePaid} ante</div>
-                )}
             </div>
         );
     }
@@ -148,7 +152,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                     fontWeight: isCurrentPlayer ? 700 : 400,
                     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
                 }}>
-                    {/* FIX 5: Show display name */}
+                    {/* Show display name */}
                     {name}{isCurrentPlayer && ' ★'}
                 </span>
 
@@ -164,13 +168,13 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                 </span>
             </div>
 
-            {player.antePaid > 0 && (
+            {player.totalContribution > 0 && (
                 <div style={{
                     alignSelf: 'flex-end',
                     fontFamily: 'Crimson Pro, serif', fontStyle: 'italic',
                     fontSize: 11, color: 'rgba(201,173,135,0.5)',
                 }}>
-                    {player.antePaid} ante in
+                    {player.totalContribution} total inside
                 </div>
             )}
 
