@@ -63,7 +63,8 @@ export type ActionType =
     | 'Ascend'
     | 'Snitch'
     | 'Smuggle'
-    | 'Sabotage';
+    | 'Sabotage'
+    | 'ExecuteDecree';
 
 /**
  * Pending State for Smuggle Action
@@ -90,6 +91,29 @@ export interface AscendChallengeState {
     playersResponded: string[]; // Tracks who has already called or folded
 }
 
+/**
+ * Whispers ui to help with decrees
+ */
+export interface Whisper {
+    subjectId: string;
+    text: string;
+}
+
+/**
+ * Pending State for a Decree Action
+ * Occurs when a Smuggle goes unchallenged. The smuggler must now make a choice based on their declared rank.
+ */
+export interface PendingDecreeState {
+    smugglerId: string;
+    decreeType: CardRank; // The rank they *declared*, which dictates the power
+    step: 'AwaitingChoice' | 'RevealingInformation'; // Some decrees just do an action, others reveal info
+
+    // For storing the results of info-revealing decrees so the UI can display them
+    revealedInfo?: {
+        targetId: string;
+        message: string;
+    };
+}
 
 /**
  * Master Game State
@@ -119,8 +143,12 @@ export interface DropGameState {
     // Game Flow
     phase: TurnPhase;
     handResults?: HandResult[]; // Populated after Judgement; cleared at start of next hand
-    pendingSmuggle?: SmuggleChallengeState;
     pendingAscend?: AscendChallengeState;
+
+    // Smuggle Action
+    pendingSmuggle?: SmuggleChallengeState;
+    pendingDecree?: PendingDecreeState;
+    whispers: Whisper[];
 
     // Gamemodes
     playerTracking: boolean;

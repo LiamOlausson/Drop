@@ -21,12 +21,26 @@ function advanceTurn(state: DropGameState): boolean {
     const activePlayers = getActivePlayers(state);
     if (activePlayers.length <= 1) return true;
 
-    state.turnsInCurrentRound++;
+    const N = state.turnOrder.length;
+    const oldIndex = state.currentTurnIndex;
 
-    // --- Round boundary: every active player has acted once ---
-    if (state.turnsInCurrentRound >= activePlayers.length) {
-        state.turnsInCurrentRound = 0;
+    // Advance to next active player (skip dead / folded)
+    let newIndex = oldIndex;
+    do {
+        newIndex = (newIndex + 1) % N;
+    } while (
+        state.players[state.turnOrder[newIndex]].isDead ||
+        state.players[state.turnOrder[newIndex]].hasFolded
+        );
 
+    state.currentTurnIndex = newIndex;
+
+    // Calculate distance from the hand leader to determine if we wrapped around
+    const distOld = (oldIndex - state.handLeaderIndex + N) % N;
+    const distNew = (newIndex - state.handLeaderIndex + N) % N;
+
+    // If the new distance is less than or equal to the old distance, a full round has wrapped
+    if (distNew <= distOld) {
         if (state.phase === 'The Climb') {
             state.climbRoundCount++;
 
@@ -35,15 +49,15 @@ function advanceTurn(state: DropGameState): boolean {
                 state.phase = 'Battle';
                 state.climbRoundCount = 0;
 
-                state.currentTurnIndex = state.handLeaderIndex;
-
+                // Reset turn to the first active player starting from the hand leader
+                let start = state.handLeaderIndex;
                 while (
-                    state.players[state.turnOrder[state.currentTurnIndex]].isDead ||
-                    state.players[state.turnOrder[state.currentTurnIndex]].hasFolded
+                    state.players[state.turnOrder[start]].isDead ||
+                    state.players[state.turnOrder[start]].hasFolded
                     ) {
-                    state.currentTurnIndex = (state.currentTurnIndex + 1) % state.turnOrder.length;
+                    start = (start + 1) % N;
                 }
-
+                state.currentTurnIndex = start;
                 return false;
             }
         } else if (state.phase === 'Battle') {
@@ -51,14 +65,6 @@ function advanceTurn(state: DropGameState): boolean {
             return true;
         }
     }
-
-    // Advance to next active player (skip dead / folded)
-    do {
-        state.currentTurnIndex = (state.currentTurnIndex + 1) % state.turnOrder.length;
-    } while (
-        state.players[state.turnOrder[state.currentTurnIndex]].isDead ||
-        state.players[state.turnOrder[state.currentTurnIndex]].hasFolded
-        );
 
     return false;
 }
@@ -198,7 +204,7 @@ export async function startHand(channelId: string, anteAmount: number): Promise<
         state.pendingSmuggle = undefined;
     }
 
-    // FIX 3: Reset handResult and hand state for each player
+    // Reset handResult and hand state for each player
     for (const playerId of state.turnOrder) {
         const player = state.players[playerId];
         player.isDead      = false;
@@ -206,7 +212,7 @@ export async function startHand(channelId: string, anteAmount: number): Promise<
         player.cannotBeBaron = false;
         player.antePaid    = anteAmount;
         player.hand        = [];
-        player.handResult  = undefined; // <-- clear previous round result
+        player.handResult  = undefined; // clear previous round result
 
         // Deduct ante from balance and add to pot
         player.balance -= anteAmount;
@@ -233,9 +239,11 @@ export async function startHand(channelId: string, anteAmount: number): Promise<
         state.currentTurnIndex = (state.currentTurnIndex + 1) % state.turnOrder.length;
     }
 
+    // Reset to initial states
     state.climbRoundCount     = 0;
     state.turnsInCurrentRound = 0;
-    state.handResults         = undefined; // FIX 3: clear old results
+    state.handResults         = undefined;
+    state.whispers            = [];
 
     await saveDropState(channelId, state);
     return true;
@@ -335,7 +343,7 @@ export async function performAscend(
         return true;
     }
 
-    // FIX 2: Deduct raise amount from ascender's balance
+    // Deduct raise amount from ascender's balance
     const player = state.players[playerId];
     if (player.balance < raiseAmount) return false; // can't bet what you don't have
 
@@ -526,24 +534,22 @@ async function resolveSmuggle(state: DropGameState, challengerId?: string) {
     const smuggle  = state.pendingSmuggle!;
     const smuggler = state.players[smuggle.smugglerId];
 
-    // 1. The smuggler ALWAYS gets the drawn card to replace their dropped card
+    // The smuggler always gets the drawn card to replace their dropped card
     smuggler.hand.push(smuggle.drawnCard);
 
     if (challengerId) {
         const accuser = state.players[challengerId];
-
-        // 2. Evaluate if the smuggler told the truth
         const toldTruth = smuggle.actualCard.rank === smuggle.declaredRank;
 
-        // 3. The challenged card is revealed to the table and goes to the discard pile
+        // The challenged card is revealed to the table and goes to the discard pile
         state.discardPile.push({ ...smuggle.actualCard, isRevealed: true });
 
-        // 4. BI-DIRECTIONAL LOGIC: Determine the loser and winner of the challenge
+        // Determine the loser and winner of the challenge
         // If the smuggler told the truth, the accuser loses. If the smuggler lied, the smuggler loses.
         const loser = toldTruth ? accuser : smuggler;
         const winner = toldTruth ? smuggler : accuser;
 
-        // 5. The LOSER suffers the consequence of the ACTUAL dropped card's rank
+        // The LOSER suffers the consequence of the actual dropped card's rank
         switch (smuggle.actualCard.rank) {
             case 'Baron':
                 // Loser matches the current value of the pot
@@ -579,14 +585,230 @@ async function resolveSmuggle(state: DropGameState, challengerId?: string) {
                 loser.isDead = true;
                 break;
         }
+        // Clean up smuggle state and advance turn
+        state.pendingSmuggle = undefined;
+        const judge = advanceTurn(state);
+        if (judge) evaluateJudgementSync(state);
+        return;
     } else {
         // Unchallenged: card goes face down to the fallen pile
         state.fallenPile.push(smuggle.actualCard);
-    }
 
-    // Clean up pending state and advance turn
-    state.pendingSmuggle = undefined;
+        // Transition from Smuggle to Decree phase
+        const declaredRank = smuggle.declaredRank;
+        const smugglerId = smuggle.smugglerId;
+        state.pendingSmuggle = undefined; // Clear smuggle
+
+        // Auto-skip decrees that require a revealed card if no one has one
+        if (declaredRank === 'Warden' || declaredRank === 'Glow Worm') {
+            const hasRevealedTarget = getActivePlayers(state).some(id =>
+                state.players[id].hand.some(c => c.isRevealed)
+            );
+
+            if (!hasRevealedTarget) {
+                const judge = advanceTurn(state);
+                if (judge) evaluateJudgementSync(state);
+                return; // End early, bypassing the decree
+            }
+        }
+        // Auto-skip Citizen if the discard pile is empty
+        else if (declaredRank === 'Citizen') {
+            if (state.discardPile.length === 0) {
+                const judge = advanceTurn(state);
+                if (judge) evaluateJudgementSync(state);
+                return; // End early, bypassing the decree
+            }
+        }
+
+        // Transition to the decree state
+        state.pendingDecree = {
+            smugglerId: smugglerId,
+            decreeType: declaredRank,
+            step: 'AwaitingChoice'
+        };
+    }
+}
+
+// ===========================================================================
+// DECREE STUBS
+// ===========================================================================
+
+export async function executeDecreeBaron(channelId: string, smugglerId: string, targetId: string) {
+    const state = await getDropState(channelId);
+    if (!state || !state.pendingDecree) return false;
+
+    // Security checks
+    if (state.pendingDecree.smugglerId !== smugglerId) return false;
+    if (state.pendingDecree.decreeType !== 'Baron') return false;
+    if (state.pendingDecree.step !== 'AwaitingChoice') return false;
+
+    const target = state.players[targetId];
+    if (!target || target.isDead || target.hasFolded) return false;
+
+    // Extract unique card ranks from the target's hand
+    const uniqueRanks = Array.from(new Set(target.hand.map(c => c.rank)));
+    const ranksString = uniqueRanks.length > 0 ? uniqueRanks.join(', ') : 'Nothing';
+
+    // Add the result to the Whispers log
+    const text = `truthfully announces their hand contains: ${ranksString}.`;
+
+    if (!state.whispers) state.whispers = [];
+    state.whispers.push({ subjectId: targetId, text });
+
+    // Clean up pending decree and advance
+    state.pendingDecree = undefined;
 
     const judge = advanceTurn(state);
     if (judge) evaluateJudgementSync(state);
+
+    await saveDropState(channelId, state);
+    return true;
+}
+
+export async function executeDecreeWarden(channelId: string, smugglerId: string, targetId: string) {
+    const state = await getDropState(channelId);
+    if (!state || !state.pendingDecree) return false;
+
+    // Security checks
+    if (state.pendingDecree.smugglerId !== smugglerId) return false;
+    if (state.pendingDecree.decreeType !== 'Warden') return false;
+    if (state.pendingDecree.step !== 'AwaitingChoice') return false;
+
+    const target = state.players[targetId];
+    if (!target || target.isDead || target.hasFolded) return false;
+
+    // Verify the target has a revealed card
+    const hasRevealed = target.hand.some(c => c.isRevealed);
+    if (!hasRevealed) return false;
+
+    // Safely calculate their current score
+    const score = target.hand.reduce((sum, c) => sum + (c.value || 0), 0);
+    const isTwentyOrMore = score >= 20;
+
+    // Add the result to the Whispers log
+    const text = isTwentyOrMore
+        ? "declares their score is 20 or greater."
+        : "declares their score is strictly less than 20.";
+
+    if (!state.whispers) state.whispers = [];
+    state.whispers.push({ subjectId: targetId, text });
+
+    // Clean up pending decree and advance
+    state.pendingDecree = undefined;
+
+    const judge = advanceTurn(state);
+    if (judge) evaluateJudgementSync(state);
+
+    await saveDropState(channelId, state);
+    return true;
+}
+
+export async function executeDecreeCitizen(
+    channelId: string, smugglerId: string,
+    discardCardIdToTake: string, handCardIdToDrop: string
+) {
+    const state = await getDropState(channelId);
+    if (!state || !state.pendingDecree) return false;
+
+    // Security checks
+    if (state.pendingDecree.smugglerId !== smugglerId) return false;
+    if (state.pendingDecree.decreeType !== 'Citizen') return false;
+    if (state.pendingDecree.step !== 'AwaitingChoice') return false;
+
+    const player = state.players[smugglerId];
+    if (!player || player.isDead || player.hasFolded) return false;
+
+    // Verify both cards exist
+    const discardIndex = state.discardPile.findIndex(c => c.id === discardCardIdToTake);
+    if (discardIndex === -1) return false;
+
+    const handIndex = player.hand.findIndex(c => c.id === handCardIdToDrop);
+    if (handIndex === -1) return false;
+
+    // Swap the cards
+    const takenCard = state.discardPile.splice(discardIndex, 1)[0];
+    const droppedCard = player.hand.splice(handIndex, 1)[0];
+
+    // Card entering hand is hidden, card leaving hand is revealed
+    takenCard.isRevealed = false;
+    droppedCard.isRevealed = true;
+
+    player.hand.push(takenCard);
+    state.discardPile.push(droppedCard);
+
+    // Clean up pending decree and advance
+    state.pendingDecree = undefined;
+
+    const judge = advanceTurn(state);
+    if (judge) evaluateJudgementSync(state);
+
+    await saveDropState(channelId, state);
+    return true;
+}
+
+export async function executeDecreeGlowWorm(channelId: string, smugglerId: string, targetId: string) {
+    const state = await getDropState(channelId);
+    if (!state || !state.pendingDecree) return false;
+
+    // Security checks
+    if (state.pendingDecree.smugglerId !== smugglerId) return false;
+    if (state.pendingDecree.decreeType !== 'Glow Worm') return false;
+    if (state.pendingDecree.step !== 'AwaitingChoice') return false;
+
+    const target = state.players[targetId];
+    if (!target || target.isDead || target.hasFolded) return false;
+
+    // Validate that the target actually has a revealed card
+    const hasRevealed = target.hand.some(c => c.isRevealed);
+    if (!hasRevealed) return false;
+
+    // Deduct standard base ante (10 coins) from the target
+    const payment = Math.min(target.balance, state.currentAnteToCall);
+    target.balance -= payment;
+    target.antePaid += payment;
+    state.pot += payment;
+
+    // Clean up the pending decree state and advance the turn
+    state.pendingDecree = undefined;
+
+    const judge = advanceTurn(state);
+    if (judge) evaluateJudgementSync(state);
+
+    await saveDropState(channelId, state);
+    return true;
+}
+
+export async function executeDecreeHollow(channelId: string, smugglerId: string, targetId: string) {
+    const state = await getDropState(channelId);
+    if (!state || !state.pendingDecree) return false;
+
+    // Security checks
+    if (state.pendingDecree.smugglerId !== smugglerId) return false;
+    if (state.pendingDecree.decreeType !== 'Hollow') return false;
+    if (state.pendingDecree.step !== 'AwaitingChoice') return false;
+
+    const target = state.players[targetId];
+    if (!target || target.isDead || target.hasFolded || target.hand.length === 0) return false;
+
+    // Find the highest value card in the target's hand
+    let highestIndex = 0;
+    for (let i = 1; i < target.hand.length; i++) {
+        if (target.hand[i].value > target.hand[highestIndex].value) {
+            highestIndex = i;
+        }
+    }
+
+    // Discard their highest card [cite: 67]
+    const discardedCard = target.hand.splice(highestIndex, 1)[0];
+    discardedCard.isRevealed = true; // Discards are face-up
+    state.discardPile.push(discardedCard);
+
+    // Clean up the pending decree state and advance the turn
+    state.pendingDecree = undefined;
+
+    const judge = advanceTurn(state);
+    if (judge) evaluateJudgementSync(state);
+
+    await saveDropState(channelId, state);
+    return true;
 }

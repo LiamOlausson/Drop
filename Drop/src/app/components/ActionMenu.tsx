@@ -88,6 +88,161 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({ gameState, playerId, pla
         );
     }
 
+    /* ── Decree overlay ── */
+    if (gameState.pendingDecree) {
+        const dec = gameState.pendingDecree;
+        const isSmuggler = dec.smugglerId === playerId;
+
+        if (!isSmuggler) return <Scroll><WaitMsg icon="📜">Waiting for the Smuggler to issue their Decree…</WaitMsg></Scroll>;
+
+        // Specific UI for Hollow
+        if (dec.decreeType === 'Hollow') {
+            return (
+                <Scroll title="📜 Decree of the Hollow">
+                    <p style={descStyle}>Choose a player. They must discard their highest rank card.</p>
+                    <Field label="Target:">
+                        <select value={targetId} onChange={e => setTargetId(e.target.value)}>
+                            <option value="" disabled>Select target…</option>
+                            {opponents.map(id => (
+                                <option key={id} value={id}>{getName(id)}</option>
+                            ))}
+                        </select>
+                    </Field>
+                    <div style={rowStyle}>
+                        <TavernBtn color="rust" disabled={!targetId} onClick={() => {
+                            onAction('ExecuteDecree', { decreeType: 'Hollow', targetId });
+                            back();
+                        }}>Execute Decree</TavernBtn>
+                    </div>
+                </Scroll>
+            );
+        }
+
+        // Specific UI for Glow Worm
+        if (dec.decreeType === 'Glow Worm') {
+            const validTargets = gameState.turnOrder.filter(id => {
+                const p = gameState.players[id];
+                return !p.isDead && !p.hasFolded && p.hand.some(c => c.isRevealed);
+            });
+
+            return (
+                <Scroll title="📜 Decree of the Glow Worm">
+                    <p style={descStyle}>Choose a player with a revealed card. They must add another ante (10 🪙) into the pot.</p>
+                    <Field label="Target:">
+                        <select value={targetId} onChange={e => setTargetId(e.target.value)}>
+                            <option value="" disabled>Select target…</option>
+                            {validTargets.map(id => (
+                                <option key={id} value={id}>{getName(id)}</option>
+                            ))}
+                        </select>
+                    </Field>
+                    <div style={rowStyle}>
+                        <TavernBtn color="rust" disabled={!targetId} onClick={() => {
+                            onAction('ExecuteDecree', { decreeType: 'Glow Worm', targetId });
+                            back();
+                        }}>Execute Decree</TavernBtn>
+                    </div>
+                </Scroll>
+            );
+        }
+
+        // Specific UI for Citizen
+        if (dec.decreeType === 'Citizen') {
+            return (
+                <Scroll title="📜 Decree of the Citizen">
+                    <p style={descStyle}>Take any card from the Discard Pile, then discard one from your hand.</p>
+
+                    <Field label="Card to take (from Discard):">
+                        <select value={targetId} onChange={e => setTargetId(e.target.value)}>
+                            <option value="" disabled>Select discard card…</option>
+                            {gameState.discardPile.map(c => (
+                                <option key={c.id} value={c.id}>
+                                    {c.name} ({c.rank}) — {c.value}pts
+                                </option>
+                            ))}
+                        </select>
+                    </Field>
+
+                    <Field label="Card to drop (from Hand):">
+                        <select value={selectedCardId} onChange={e => setSelectedCardId(e.target.value)}>
+                            <option value="" disabled>Select hand card…</option>
+                            {player.hand.map(c => (
+                                <option key={c.id} value={c.id}>
+                                    {c.name} ({c.rank}) — {c.value}pts
+                                </option>
+                            ))}
+                        </select>
+                    </Field>
+
+                    <div style={rowStyle}>
+                        <TavernBtn color="rust" disabled={!targetId || !selectedCardId} onClick={() => {
+                            onAction('ExecuteDecree', {
+                                decreeType: 'Citizen',
+                                discardCardId: targetId,
+                                handCardId: selectedCardId
+                            });
+                            back();
+                        }}>Execute Decree</TavernBtn>
+                    </div>
+                </Scroll>
+            );
+        }
+
+        // Specific UI for Warden
+        if (dec.decreeType === 'Warden') {
+            const validTargets = gameState.turnOrder.filter(id => {
+                const p = gameState.players[id];
+                return !p.isDead && !p.hasFolded && p.hand.some(c => c.isRevealed);
+            });
+
+            return (
+                <Scroll title="📜 Decree of the Warden">
+                    <p style={descStyle}>Choose a player with a revealed card. They must declare if their score is ≥ 20.</p>
+                    <Field label="Target:">
+                        <select value={targetId} onChange={e => setTargetId(e.target.value)}>
+                            <option value="" disabled>Select target…</option>
+                            {validTargets.map(id => (
+                                <option key={id} value={id}>{getName(id)}</option>
+                            ))}
+                        </select>
+                    </Field>
+                    <div style={rowStyle}>
+                        <TavernBtn color="rust" disabled={!targetId} onClick={() => {
+                            onAction('ExecuteDecree', { decreeType: 'Warden', targetId });
+                            back();
+                        }}>Execute Decree</TavernBtn>
+                    </div>
+                </Scroll>
+            );
+        }
+
+        // Specific UI for Baron
+        if (dec.decreeType === 'Baron') {
+            return (
+                <Scroll title="📜 Decree of the Baron">
+                    <p style={descStyle}>Choose a player. They must truthfully announce which card ranks are present in their hand.</p>
+                    <Field label="Target:">
+                        <select value={targetId} onChange={e => setTargetId(e.target.value)}>
+                            <option value="" disabled>Select target…</option>
+                            {opponents.map(id => (
+                                <option key={id} value={id}>{getName(id)}</option>
+                            ))}
+                        </select>
+                    </Field>
+                    <div style={rowStyle}>
+                        <TavernBtn color="rust" disabled={!targetId} onClick={() => {
+                            onAction('ExecuteDecree', { decreeType: 'Baron', targetId });
+                            back();
+                        }}>Execute Decree</TavernBtn>
+                    </div>
+                </Scroll>
+            );
+        }
+
+        // Fallback for decrees we haven't built yet
+        return <Scroll><WaitMsg icon="📜">The {dec.decreeType} Decree is being written…</WaitMsg></Scroll>;
+    }
+
     /* ── Ascend response overlay ── */
     if (gameState.pendingAscend) {
         const asc = gameState.pendingAscend;

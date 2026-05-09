@@ -38,7 +38,8 @@ export async function initializeGame(channelId: string, hostId: string, playerTr
         phase: 'Setup',
         hostId,
         playerTracking,
-        assignedNames: {}
+        assignedNames: {},
+        whispers: []
     };
 
     await setState(STATE_KEY, initialState, { namespace: channelId });

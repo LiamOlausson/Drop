@@ -5,8 +5,13 @@ import { initializeGame, joinGame, destroyGame, getDropState } from '../../game/
 import {
     startHand, performScavenge, performDive, performAscend,
     performSnitch, performSabotage, performSmuggle,
-    passSmuggle, challengeSmuggle, respondToAscend
+    passSmuggle, challengeSmuggle, respondToAscend,
+    executeDecreeHollow, executeDecreeGlowWorm, executeDecreeCitizen,
+    executeDecreeWarden, executeDecreeBaron
 } from '../../game/actions.js';
+
+// In-memory Mutex to prevent state-overwrite race conditions
+const channelLocks = new Map<string, Promise<void>>();
 
 export default async (req: RoboRequest) => {
     if (req.method !== 'POST') {
@@ -20,75 +25,106 @@ export default async (req: RoboRequest) => {
         return RoboResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    let success = false;
+    // Queue the request for this specific channel so multiple players confirming don't overwrite each other
+    return new Promise((resolve) => {
+        const previous = channelLocks.get(channelId) || Promise.resolve();
 
-    try {
-        switch (action) {
-            case 'Initialize':
-                await initializeGame(channelId, userId, payload?.playerTracking ?? false);
-                success = true;
-                break;
-            case 'ReturnToLobby':
-                const currentState = await getDropState(channelId);
-                // Allow the host, or the first player (if old state), or anyone (if empty old state) to wipe it
-                if (currentState && (
-                    currentState.hostId === userId ||
-                    (!currentState.hostId && currentState.turnOrder[0] === userId) ||
-                    (!currentState.hostId && currentState.turnOrder.length === 0)
-                )) {
-                    await destroyGame(channelId);
-                    success = true;
-                } else {
-                    success = false; // Rejected: Not the host
+        const task = async () => {
+            let success = false;
+            try {
+                switch (action) {
+                    case 'Initialize':
+                        await initializeGame(channelId, userId, payload?.playerTracking ?? false);
+                        success = true;
+                        break;
+                    case 'ReturnToLobby':
+                        const currentState = await getDropState(channelId);
+                        if (currentState && (
+                            currentState.hostId === userId ||
+                            (!currentState.hostId && currentState.turnOrder[0] === userId) ||
+                            (!currentState.hostId && currentState.turnOrder.length === 0)
+                        )) {
+                            await destroyGame(channelId);
+                            success = true;
+                        } else {
+                            success = false;
+                        }
+                        break;
+                    case 'Join':
+                        success = await joinGame(channelId, userId, payload?.userName);
+                        break;
+                    case 'StartHand':
+                        success = await startHand(channelId, payload?.anteAmount || 10);
+                        break;
+                    case 'Scavenge':
+                        success = await performScavenge(channelId, userId, payload.cardId, payload.source);
+                        break;
+                    case 'Dive':
+                        success = await performDive(channelId, userId, payload?.discardIds || []);
+                        break;
+                    case 'Ascend':
+                        success = await performAscend(channelId, userId, payload?.raiseAmount ?? 5);
+                        break;
+                    case 'RespondAscend':
+                        success = await respondToAscend(channelId, userId, payload.response);
+                        break;
+                    case 'Snitch':
+                        success = await performSnitch(channelId, userId, payload.targetId, payload.type);
+                        break;
+                    case 'Smuggle':
+                        success = await performSmuggle(channelId, userId, payload.cardId, payload.declaredRank);
+                        break;
+                    case 'Sabotage':
+                        success = await performSabotage(channelId, userId, payload.targetId, payload.cardIndex || 0, payload.revealIndex || 0);
+                        break;
+                    case 'PassSmuggle':
+                        await passSmuggle(channelId, userId);
+                        success = true;
+                        break;
+                    case 'ChallengeSmuggle':
+                        await challengeSmuggle(channelId, userId);
+                        success = true;
+                        break;
+                    case 'ExecuteDecree':
+                        if (payload.decreeType === 'Hollow') {
+                            success = await executeDecreeHollow(channelId, userId, payload.targetId);
+                        } else if (payload.decreeType === 'Glow Worm') {
+                            success = await executeDecreeGlowWorm(channelId, userId, payload.targetId);
+                        } else if (payload.decreeType === 'Citizen') {
+                            success = await executeDecreeCitizen(channelId, userId, payload.discardCardId, payload.handCardId);
+                        } else if (payload.decreeType === 'Warden') {
+                            success = await executeDecreeWarden(channelId, userId, payload.targetId);
+                        } else if (payload.decreeType === 'Baron') {
+                            success = await executeDecreeBaron(channelId, userId, payload.targetId);
+                        }
+                        break;
+                    default:
+                        resolve(RoboResponse.json({ error: 'Unknown action type' }, { status: 400 }));
+                        return;
                 }
-                break;
-            case 'Join':
-                success = await joinGame(channelId, userId, payload?.userName);
-                break;
-            case 'StartHand':
-                success = await startHand(channelId, payload?.anteAmount || 10);
-                break;
-            case 'Scavenge':
-                success = await performScavenge(channelId, userId, payload.cardId, payload.source);
-                break;
-            case 'Dive':
-                success = await performDive(channelId, userId, payload?.discardIds || []);
-                break;
-            case 'Ascend':
-                success = await performAscend(channelId, userId, payload?.raiseAmount ?? 5);
-                break;
-            case 'RespondAscend':
-                success = await respondToAscend(channelId, userId, payload.response);
-                break;
-            case 'Snitch':
-                success = await performSnitch(channelId, userId, payload.targetId, payload.type);
-                break;
-            case 'Smuggle':
-                success = await performSmuggle(channelId, userId, payload.cardId, payload.declaredRank);
-                break;
-            case 'Sabotage':
-                success = await performSabotage(channelId, userId, payload.targetId, payload.cardIndex || 0, payload.revealIndex || 0);
-                break;
-            case 'PassSmuggle':
-                await passSmuggle(channelId, userId);
-                success = true;
-                break;
-            case 'ChallengeSmuggle':
-                await challengeSmuggle(channelId, userId);
-                success = true;
-                break;
-            default:
-                return RoboResponse.json({ error: 'Unknown action type' }, { status: 400 });
-        }
 
-        if (success) {
-            return RoboResponse.json({ success: true });
-        } else {
-            return RoboResponse.json({ error: 'Action rejected by game rules' }, { status: 400 });
-        }
+                if (success) {
+                    resolve(RoboResponse.json({ success: true }));
+                } else {
+                    resolve(RoboResponse.json({ error: 'Action rejected by game rules' }, { status: 400 }));
+                }
+            } catch (error) {
+                console.error(`Error executing action ${action}:`, error);
+                resolve(RoboResponse.json({ error: 'Internal server error' }, { status: 500 }));
+            }
+        };
 
-    } catch (error) {
-        console.error(`Error executing action ${action}:`, error);
-        return RoboResponse.json({ error: 'Internal server error' }, { status: 500 });
-    }
+        const next = previous.then(task).catch(() => {
+            resolve(RoboResponse.json({ error: 'Server lock error' }, { status: 500 }));
+        });
+
+        channelLocks.set(channelId, next);
+
+        // Clean up the lock queue
+        next.finally(() => {
+            if (channelLocks.get(channelId) === next) {
+                channelLocks.delete(channelId);
+            }
+        });
+    });
 };
