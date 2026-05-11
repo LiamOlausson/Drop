@@ -1,5 +1,5 @@
 // src/app/views/ActiveGameView.tsx
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { GameBoard } from '../components/GameBoard';
 import { PlayerHand } from '../components/PlayerHand';
 import { ActionMenu } from '../components/ActionMenu';
@@ -23,6 +23,18 @@ export const ActiveGameView: React.FC<ActiveGameViewProps> = ({ gameState, userI
     const [anteAmount, setAnteAmount] = useState<number>(gameState.baseAnte || 10);
     const getName = (id: string) => gameState.assignedNames?.[id] || playerNames[id] || id.substring(0, 10) + '…';
     const [isKickMenuOpen, setIsKickMenuOpen] = useState(false);
+    const [shaking, setShaking] = useState(false);
+    const prevLog = useRef(gameState.lastActionLog);
+
+    useEffect(() => {
+        const log = gameState.lastActionLog;
+        if (!log || log === prevLog.current) return;
+        prevLog.current = log;
+        if (log.text.includes('Sabotaged')) {
+            setShaking(true);
+            setTimeout(() => setShaking(false), 450);
+        }
+    }, [gameState.lastActionLog]);
 
     // Entire layout is viewport-locked, no scrolling
     return (
@@ -88,6 +100,7 @@ export const ActiveGameView: React.FC<ActiveGameViewProps> = ({ gameState, userI
             {/* ── Main Content Area ── */}
             <div style={{
                 flex: 1, display: 'flex', overflow: 'hidden',
+                animation: shaking ? 'shake 0.4s ease' : undefined,
             }}>
 
                 {/* ── Setup Phase ── */}
@@ -133,7 +146,7 @@ export const ActiveGameView: React.FC<ActiveGameViewProps> = ({ gameState, userI
                                             {getName(id)}{id === userId ? ' (You)' : ''}
                                         </span>
                                         <span style={{ fontFamily: 'Crimson Pro, serif', fontSize: 13, color: 'rgba(201,173,135,0.6)' }}>
-                                            <Icon name="coin" size={13} /> {gameState.players[id].balance}
+                                            <Icon name="coin" size={13} color="#f0c040" /> {gameState.players[id].balance}
                                         </span>
                                     </div>
                                 ))}
@@ -201,7 +214,7 @@ export const ActiveGameView: React.FC<ActiveGameViewProps> = ({ gameState, userI
                             {/* update the warning to reference the new dynamic anteAmount */}
                             {myPlayer && myPlayer.balance < anteAmount && (
                                 <p style={{ fontFamily: 'Crimson Pro, serif', fontStyle: 'italic', fontSize: 13, color: '#c05050', marginTop: 10 }}>
-                                    ⚠ Not enough coin to ante (need {anteAmount} <Icon name="coin" size={13} />)
+                                    ⚠ Not enough coin to ante (need {anteAmount} <Icon name="coin" size={13} color="#f0c040" />)
                                 </p>
                             )}
                         </div>
@@ -418,6 +431,7 @@ export const ActiveGameView: React.FC<ActiveGameViewProps> = ({ gameState, userI
                                             isActiveTurn={gameState.turnOrder[gameState.currentTurnIndex] === opponentId}
                                             displayName={getName(opponentId)}
                                             compact={true}
+                                            lastActionLog={gameState.lastActionLog}
                                         />
                                     ))}
                                 </div>

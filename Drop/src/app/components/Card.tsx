@@ -1,5 +1,5 @@
 // src/app/components/Card.tsx
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import type { Card as CardType, CardRank } from '../../game/types';
 import { Icon, type IconName } from './Icon';
 
@@ -12,12 +12,12 @@ interface CardProps {
     style?: React.CSSProperties;
 }
 
-const RANK_CONFIG: Record<CardRank, { color: string; symbol: string; glow: string }> = {
-    Baron:       { color: '#c0392b', symbol: 'crown', glow: 'rgba(192,57,43,0.5)' },
-    Warden:      { color: '#c0932b', symbol: 'eye',   glow: 'rgba(192,147,43,0.4)' },
-    Citizen:     { color: '#4a7a4a', symbol: 'scales',    glow: 'rgba(74,122,74,0.3)' },
-    'Glow Worm': { color: '#5a8a9a', symbol: 'star-card', glow: 'rgba(90,138,154,0.3)' },
-    Hollow:      { color: '#6b5e8d', symbol: 'moon',      glow: 'rgba(107,94,141,0.35)' },
+const RANK_CONFIG: Record<CardRank, { color: string; symbol: string; glow: string; bgTint: string }> = {
+    Baron:       { color: '#c0392b', symbol: 'crown',     glow: 'rgba(192,57,43,0.5)',   bgTint: 'rgba(192,57,43,0.09)' },
+    Warden:      { color: '#c0932b', symbol: 'eye',       glow: 'rgba(192,147,43,0.4)',  bgTint: 'rgba(192,147,43,0.06)' },
+    Citizen:     { color: '#4a7a4a', symbol: 'scales',    glow: 'rgba(74,122,74,0.3)',   bgTint: 'rgba(74,122,74,0.06)' },
+    'Glow Worm': { color: '#5a8a9a', symbol: 'star-card', glow: 'rgba(90,138,154,0.3)',  bgTint: 'rgba(90,138,154,0.1)' },
+    Hollow:      { color: '#6b5e8d', symbol: 'moon',      glow: 'rgba(107,94,141,0.35)', bgTint: 'rgba(107,94,141,0.08)' },
 };
 
 const SIZE_MAP = {
@@ -29,6 +29,17 @@ const SIZE_MAP = {
 export const Card: React.FC<CardProps> = ({ card, hidden, size = 'md', style }) => {
     const sz = SIZE_MAP[size];
     const [hovered, setHovered] = useState(false);
+    const prevHidden = useRef(hidden);
+    const [isFlipping, setIsFlipping] = useState(false);
+
+    useEffect(() => {
+        if (prevHidden.current === true && hidden === false) {
+            setIsFlipping(true);
+            const t = setTimeout(() => setIsFlipping(false), 320);
+            return () => clearTimeout(t);
+        }
+        prevHidden.current = hidden;
+    }, [hidden]);
 
     /* ── Card Back ── */
     if (hidden || !card) {
@@ -44,8 +55,8 @@ export const Card: React.FC<CardProps> = ({ card, hidden, size = 'md', style }) 
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 flexDirection: 'column', gap: 4,
                 boxShadow: hovered
-                    ? '0 6px 20px rgba(0,0,0,0.8), 0 0 14px rgba(240,192,64,0.1), inset 0 0 0 1px rgba(240,192,64,0.12)'
-                    : '0 4px 12px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.05)',
+                    ? '0 2px 4px rgba(0,0,0,0.95), 4px 8px 20px rgba(0,0,0,0.8), -1px -1px 0 rgba(255,255,255,0.04), 0 0 14px rgba(240,192,64,0.1)'
+                    : '0 2px 4px rgba(0,0,0,0.9), 3px 6px 16px rgba(0,0,0,0.75), -1px -1px 0 rgba(255,255,255,0.03)',
                 transition: 'box-shadow 0.2s ease',
                 position: 'relative', overflow: 'hidden',
                 flexShrink: 0,
@@ -90,11 +101,12 @@ export const Card: React.FC<CardProps> = ({ card, hidden, size = 'md', style }) 
                     ? `0 6px 24px rgba(0,0,0,0.7), 0 0 40px ${cfg.glow}, inset 0 0 36px ${cfg.glow}`
                     : `0 4px 18px rgba(0,0,0,0.6), 0 0 28px ${cfg.glow}, inset 0 0 26px ${cfg.glow}`
                 : hovered
-                    ? '0 6px 18px rgba(0,0,0,0.65), 0 0 10px rgba(220,185,120,0.18), inset 0 0 0 1px rgba(200,165,100,0.2)'
-                    : '0 4px 12px rgba(0,0,0,0.6), inset 0 0 0 1px rgba(200,165,100,0.15)',
+                    ? '0 2px 4px rgba(0,0,0,0.95), 4px 8px 20px rgba(0,0,0,0.75), -1px -1px 0 rgba(255,255,255,0.05)'
+                    : '0 2px 4px rgba(0,0,0,0.9), 3px 6px 16px rgba(0,0,0,0.7), -1px -1px 0 rgba(255,255,255,0.03)',
             transition: 'box-shadow 0.2s ease',
             position: 'relative', overflow: 'hidden',
-            animation: 'cardDeal 0.3s ease-out forwards',
+            animation: isFlipping ? 'cardFlip 0.28s cubic-bezier(0.4,0,0.2,1) forwards' : 'cardDeal 0.3s ease-out forwards',
+            filter: card.rank === 'Glow Worm' ? 'drop-shadow(0 0 4px rgba(90,138,154,0.45))' : undefined,
             flexShrink: 0,
             ...style,
         }}>
@@ -105,6 +117,12 @@ export const Card: React.FC<CardProps> = ({ card, hidden, size = 'md', style }) 
                 border: card.isRevealed
                     ? `2px solid ${cfg.color}70`
                     : '1px solid rgba(150,115,55,0.25)',
+                pointerEvents: 'none', zIndex: 0,
+            }} />
+            {/* Rank material tint overlay */}
+            <div style={{
+                position: 'absolute', inset: 0, borderRadius: 7,
+                background: cfg.bgTint,
                 pointerEvents: 'none', zIndex: 0,
             }} />
 
