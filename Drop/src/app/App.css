@@ -282,25 +282,25 @@ select:focus, input:focus { border-color: var(--candle); }
     100% { transform: translate(-50%, -50%) rotate(360deg); }
 }
 
-/* ── Action tile idle animations ── */
-@keyframes scavenge-sweep {
-    0%   { transform: translateX(-120%) skewX(-18deg); opacity: 0; }
-    15%  { opacity: 0.85; }
-    85%  { opacity: 0.85; }
-    100% { transform: translateX(120%)  skewX(-18deg); opacity: 0; }
-}
-@keyframes dive-depth {
-    0%, 100% { box-shadow: inset 0 0 0 0 transparent, 0 0 0 0 transparent; }
-    50%       { box-shadow: inset 0 -6px 16px rgba(74,106,140,0.45), 0 4px 12px rgba(74,106,140,0.2); }
-}
-
+/* ── Action tile idle glows ── */
 .action-tile { position: relative; overflow: hidden; }
 
-.action-tile-scavenge::after {
+.action-tile-scavenge::after,
+.action-tile-dive::after,
+.action-tile-ascend::after,
+.action-tile-snitch::after,
+.action-tile-smuggle::after,
+.action-tile-sabotage::after {
     content: '';
-    position: absolute; inset: 0;
-    background: linear-gradient(105deg, transparent 30%, rgba(106,140,74,0.38) 50%, transparent 70%);
-    animation: scavenge-sweep 4s ease-in-out infinite 0.8s;
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 60%;
     pointer-events: none;
 }
-.action-tile-dive { animation: dive-depth 3s ease-in-out infinite; }
+
+.action-tile-scavenge::after  { background: radial-gradient(ellipse 85% 55% at 50% 100%, rgba(106,140,74,0.35)  0%, transparent 75%); }
+.action-tile-dive::after      { background: radial-gradient(ellipse 85% 55% at 50% 100%, rgba(74,106,140,0.35)  0%, transparent 75%); }
+.action-tile-ascend::after    { background: radial-gradient(ellipse 85% 55% at 50% 100%, rgba(140,74,74,0.35)   0%, transparent 75%); }
+.action-tile-snitch::after    { background: radial-gradient(ellipse 85% 55% at 50% 100%, rgba(122,106,42,0.35)  0%, transparent 75%); }
+.action-tile-smuggle::after   { background: radial-gradient(ellipse 85% 55% at 50% 100%, rgba(106,74,140,0.35)  0%, transparent 75%); }
+.action-tile-sabotage::after  { background: radial-gradient(ellipse 85% 55% at 50% 100%, rgba(140,106,42,0.35)  0%, transparent 75%); }
