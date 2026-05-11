@@ -1,6 +1,7 @@
 // src/app/components/GameBoard.tsx
 import React from 'react';
 import { Card } from './Card';
+import { Icon } from './Icon';
 import type { DropGameState } from '../../game/types';
 
 interface GameBoardProps {
@@ -81,7 +82,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
                     boxShadow: '0 0 20px rgba(240,192,64,0.15), 0 4px 12px rgba(0,0,0,0.6)',
                     display: 'flex', alignItems: 'center', gap: 10,
                 }}>
-                    <span style={{ fontSize: 20 }}>🪙</span>
+                    <Icon name="coin" size={20} color="#f0c040" />
                     <span style={{
                         fontFamily: 'Cinzel, serif', fontWeight: 700,
                         fontSize: 22, color: '#f0c040',
@@ -113,7 +114,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
                 position: 'relative', zIndex: 1,
             }}>
                 <span style={{ fontFamily: 'Crimson Pro, serif', fontSize: 13, color: 'rgba(201,173,135,0.6)', fontStyle: 'italic' }}>
-          Current Bet Amount (per person): <strong style={{ color: '#c9ad87' }}>{gameState.currentAnteToCall} 🪙</strong>
+          Current Bet Amount (per person): <strong style={{ color: '#c9ad87' }}>{gameState.currentAnteToCall} <Icon name="coin" size={13} /></strong>
         </span>
             </div>
         </div>

@@ -1,5 +1,6 @@
 // src/app/components/ActionMenu.tsx
 import React, { useState } from 'react';
+import { Icon } from './Icon';
 import type { DropGameState, ActionType } from '../../game/types';
 
 interface ActionMenuProps {
@@ -260,11 +261,11 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({ gameState, playerId, pla
                 <p style={descStyle}>
                     <strong style={{ color: '#f0c040' }}>{getName(asc.initiatorId)}</strong>{' '}
                     has Ascended. Pay{' '}
-                    <strong style={{ color: '#c0932b' }}>{amountToCall} 🪙</strong> to stay.
+                    <strong style={{ color: '#c0932b' }}>{amountToCall} <Icon name="coin" size={13} /></strong> to stay.
                 </p>
                 <div style={rowStyle}>
                     <TavernBtn color="mold" onClick={() => onAction('RespondAscend', { response: 'Call' })}>
-                        Climb — {amountToCall} 🪙
+                        Climb — {amountToCall} <Icon name="coin" size={13} />
                     </TavernBtn>
                     <TavernBtn color="blood" onClick={() => onAction('RespondAscend', { response: 'Fold' })}>
                         Go To The Bridge
@@ -316,7 +317,7 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({ gameState, playerId, pla
                 />
                 <div style={rowStyle}>
                     <TavernBtn color="candle" onClick={() => { onAction('Ascend', { raiseAmount }); back(); }}>
-                        Confirm +{raiseAmount} 🪙
+                        Confirm +{raiseAmount} <Icon name="coin" size={13} />
                     </TavernBtn>
                     <BackLink onClick={back} />
                 </div>
@@ -449,7 +450,7 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({ gameState, playerId, pla
                     />
                     <div style={rowStyle}>
                         <TavernBtn color="blood" onClick={() => { onAction('Ascend', { raiseAmount }); back(); }}>
-                            Ascend +{raiseAmount} 🪙
+                            Ascend +{raiseAmount} <Icon name="coin" size={13} />
                         </TavernBtn>
                         <BackLink onClick={back} />
                     </div>
@@ -698,7 +699,7 @@ const AscendInput: React.FC<{
                 onMouseOver={e => { e.currentTarget.style.background = 'rgba(139,26,26,0.35)'; }}
                 onMouseOut={e  => { e.currentTarget.style.background = 'rgba(139,26,26,0.2)'; }}
         >
-            ALL IN — {playerBalance} 🪙
+            ALL IN — {playerBalance} <Icon name="coin" size={13} />
         </button>
     </div>
 );

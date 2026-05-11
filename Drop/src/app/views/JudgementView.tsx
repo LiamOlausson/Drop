@@ -1,6 +1,7 @@
 // src/app/views/JudgementView.tsx
 import React, { useState } from 'react';
 import { Card } from '../components/Card';
+import { Icon, type IconName } from '../components/Icon';
 import type { DropGameState } from '../../game/types';
 
 interface JudgementViewProps {
@@ -10,10 +11,10 @@ interface JudgementViewProps {
     executeAction: (action: any, payload?: any) => void;
 }
 
-const RESULT_STYLE = {
-    Baron:    { icon: '♛', label: 'Baron',    color: '#f0c040', bg: 'rgba(240,192,64,0.08)',  border: 'rgba(240,192,64,0.35)' },
-    Survivor: { icon: '⚔', label: 'Survivor', color: '#6abf6a', bg: 'rgba(74,122,74,0.08)',   border: 'rgba(74,122,74,0.35)' },
-    Dead:     { icon: '✝', label: 'Dead',     color: '#6b5e5e', bg: 'rgba(26,20,16,0.8)',      border: 'rgba(60,46,30,0.4)' },
+const RESULT_STYLE: Record<string, { icon: IconName; label: string; color: string; bg: string; border: string }> = {
+    Baron:    { icon: 'crown',   label: 'Baron',    color: '#f0c040', bg: 'rgba(240,192,64,0.08)',  border: 'rgba(240,192,64,0.35)' },
+    Survivor: { icon: 'eye',     label: 'Survivor', color: '#6abf6a', bg: 'rgba(74,122,74,0.08)',   border: 'rgba(74,122,74,0.35)' },
+    Dead:     { icon: 'obelisk', label: 'Dead',     color: '#6b5e5e', bg: 'rgba(26,20,16,0.8)',      border: 'rgba(60,46,30,0.4)' },
 };
 
 export const JudgementView: React.FC<JudgementViewProps> = ({ gameState, userId, playerNames, executeAction }) => {
@@ -67,14 +68,14 @@ export const JudgementView: React.FC<JudgementViewProps> = ({ gameState, userId,
                         animation: 'pulse-glow 2s ease-in-out infinite',
                         width: '100%', maxWidth: 400,
                     }}>
-                        <div style={{ fontSize: 28, marginBottom: 2 }}>{myCfg.icon}</div>
+                        <div style={{ marginBottom: 2 }}><Icon name={myCfg.icon} size={myResult === 'Dead' ? 62 : 32} color={myCfg.color} /></div>
                         <div style={{
                             fontFamily: 'Cinzel, serif', fontWeight: 900, fontSize: 20,
                             color: myCfg.color, letterSpacing: 2,
                         }}>You are the {myCfg.label}</div>
                         {myResult === 'Baron' && (
                             <p style={{ fontFamily: 'Crimson Pro, serif', fontStyle: 'italic', fontSize: 13, color: 'rgba(240,192,64,0.6)', marginTop: 3 }}>
-                                The highest hand claims the Sump.
+                                The highest hand claims the Peak.
                             </p>
                         )}
                         {myResult === 'Survivor' && (
@@ -84,7 +85,7 @@ export const JudgementView: React.FC<JudgementViewProps> = ({ gameState, userId,
                         )}
                         {myResult === 'Dead' && (
                             <p style={{ fontFamily: 'Crimson Pro, serif', fontStyle: 'italic', fontSize: 13, color: 'rgba(107,94,94,0.6)', marginTop: 3 }}>
-                                Caught in the middle — everything to the Sump.
+                                Caught in the middle, everything to the Sump.
                             </p>
                         )}
                     </div>
@@ -121,7 +122,7 @@ export const JudgementView: React.FC<JudgementViewProps> = ({ gameState, userId,
                                         fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 0.5,
                                         color: isYou ? '#f0c040' : '#c9ad87', fontWeight: isYou ? 700 : 400,
                                     }}>
-                                        {res.icon} {getName(playerId)}{isYou ? ' (You)' : ''}
+                                        <Icon name={res.icon} size={10} color={res.color} /> {getName(playerId)}{isYou ? ' (You)' : ''}
                                     </div>
                                     <div style={{
                                         fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 2,
@@ -139,7 +140,7 @@ export const JudgementView: React.FC<JudgementViewProps> = ({ gameState, userId,
                                     <div style={{ fontFamily: 'Crimson Pro, serif', fontStyle: 'italic', fontSize: 11, color: 'rgba(201,173,135,0.5)' }}>pts</div>
                                 </div>
                                 <div style={{ fontFamily: 'Crimson Pro, serif', fontSize: 12, color: 'rgba(201,173,135,0.6)' }}>
-                                    🪙 {p.balance}
+                                    <Icon name="coin" size={12} /> {p.balance}
                                 </div>
                             </div>
                         );
@@ -148,7 +149,7 @@ export const JudgementView: React.FC<JudgementViewProps> = ({ gameState, userId,
 
                 {gameState.pot > 0 && (
                     <div style={{ fontFamily: 'Crimson Pro, serif', fontStyle: 'italic', fontSize: 13, color: 'rgba(201,173,135,0.5)' }}>
-                        Remaining in Sump: <strong style={{ color: '#f0c040' }}>{gameState.pot} 🪙</strong>
+                        Remaining in Sump: <strong style={{ color: '#f0c040' }}>{gameState.pot} <Icon name="coin" size={13} /></strong>
                     </div>
                 )}
 
@@ -170,7 +171,7 @@ export const JudgementView: React.FC<JudgementViewProps> = ({ gameState, userId,
                                         fontFamily: 'Cinzel, serif', outline: 'none'
                                     }}
                                 />
-                                <span style={{ fontFamily: 'Crimson Pro, serif', color: '#f0c040', fontSize: 16 }}>🪙</span>
+                                <Icon name="coin" size={16} color="#f0c040" />
                             </div>
                         </div>
                     )}

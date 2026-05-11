@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { GameBoard } from '../components/GameBoard';
 import { PlayerHand } from '../components/PlayerHand';
 import { ActionMenu } from '../components/ActionMenu';
+import { Icon } from '../components/Icon';
 import type { DropGameState } from '../../game/types';
 
 interface ActiveGameViewProps {
@@ -132,7 +133,7 @@ export const ActiveGameView: React.FC<ActiveGameViewProps> = ({ gameState, userI
                                             {getName(id)}{id === userId ? ' (You)' : ''}
                                         </span>
                                         <span style={{ fontFamily: 'Crimson Pro, serif', fontSize: 13, color: 'rgba(201,173,135,0.6)' }}>
-                                            🪙 {gameState.players[id].balance}
+                                            <Icon name="coin" size={13} /> {gameState.players[id].balance}
                                         </span>
                                     </div>
                                 ))}
@@ -165,7 +166,7 @@ export const ActiveGameView: React.FC<ActiveGameViewProps> = ({ gameState, userI
                                                     fontFamily: 'Cinzel, serif', outline: 'none'
                                                 }}
                                             />
-                                            <span style={{ fontFamily: 'Crimson Pro, serif', color: '#f0c040' }}>🪙</span>
+                                            <Icon name="coin" size={16} color="#f0c040" />
                                         </div>
                                         <button
                                             onClick={() => executeAction('StartHand', { anteAmount })}
@@ -200,7 +201,7 @@ export const ActiveGameView: React.FC<ActiveGameViewProps> = ({ gameState, userI
                             {/* update the warning to reference the new dynamic anteAmount */}
                             {myPlayer && myPlayer.balance < anteAmount && (
                                 <p style={{ fontFamily: 'Crimson Pro, serif', fontStyle: 'italic', fontSize: 13, color: '#c05050', marginTop: 10 }}>
-                                    ⚠ Not enough coin to ante (need {anteAmount} 🪙)
+                                    ⚠ Not enough coin to ante (need {anteAmount} <Icon name="coin" size={13} />)
                                 </p>
                             )}
                         </div>
@@ -264,7 +265,7 @@ export const ActiveGameView: React.FC<ActiveGameViewProps> = ({ gameState, userI
                                 {gameState.whispers && gameState.whispers.length > 0 ? (
                                     gameState.whispers.map((w, i) => (
                                         <span key={i} style={{ fontFamily: 'Crimson Pro, serif', fontStyle: 'italic', fontSize: 13, color: 'rgba(201,173,135,0.8)', lineHeight: 1.3 }}>
-                                            👁 <strong style={{ color: '#f0c040' }}>{getName(w.subjectId)}</strong> {w.text}
+                                            <Icon name="eye" size={13} /> <strong style={{ color: '#f0c040' }}>{getName(w.subjectId)}</strong> {w.text}
                                         </span>
                                     ))
                                 ) : (

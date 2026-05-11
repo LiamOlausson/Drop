@@ -412,7 +412,7 @@ export async function performAscend(
         playersResponded: [playerId] // initiator already responded
     };
 
-    state.lastActionLog = { subjectId: playerId, text: `Ascended (+${raiseAmount} 🪙)` };
+    state.lastActionLog = { subjectId: playerId, text: `Ascended (+${raiseAmount})` };
     await saveDropState(channelId, state);
     return true;
 }

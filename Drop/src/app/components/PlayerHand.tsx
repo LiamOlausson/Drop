@@ -1,6 +1,7 @@
 // src/app/components/PlayerHand.tsx
 import React from 'react';
 import { Card } from './Card';
+import { Icon, type IconName } from './Icon';
 import type { PlayerState } from '../../game/types';
 
 interface PlayerHandProps {
@@ -11,10 +12,10 @@ interface PlayerHandProps {
     compact?: boolean;
 }
 
-const RESULT_CONFIG = {
-    Baron:    { label: '♛ Baron',    bg: '#8b1a1a', color: '#f0c040' },
-    Survivor: { label: '⚔ Survivor', bg: '#1e3a1e', color: '#6abf6a' },
-    Dead:     { label: '✝ Dead',     bg: '#1a1410', color: '#6b5e5e' },
+const RESULT_CONFIG: Record<string, { icon: IconName; label: string; bg: string; color: string }> = {
+    Baron:    { icon: 'crown',   label: 'Baron',    bg: '#8b1a1a', color: '#f0c040' },
+    Survivor: { icon: 'eye',     label: 'Survivor', bg: '#1e3a1e', color: '#6abf6a' },
+    Dead:     { icon: 'obelisk', label: 'Dead',     bg: '#1a1410', color: '#6b5e5e' },
 };
 
 export const PlayerHand: React.FC<PlayerHandProps> = ({
@@ -61,7 +62,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                             {scoreDisplay}
                         </span>
                         <span style={{ fontFamily: 'Crimson Pro, serif', fontSize: 12, color: 'rgba(201,173,135,0.7)', textAlign: 'right' }}>
-                            🪙{player.balance}
+                            <Icon name="coin" size={13} />{player.balance}
                         </span>
                     </div>
 
@@ -71,7 +72,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                             background: result.bg, color: result.color, padding: '2px 8px',
                             borderRadius: 3, fontFamily: 'Cinzel, serif', fontSize: 9,
                             letterSpacing: 0.5, marginBottom: 6, display: 'inline-block', alignSelf: 'flex-start'
-                        }}>{result.label}</div>
+                        }}><Icon name={result.icon} size={9} color={result.color} /> {result.label}</div>
                     ) : isOut ? (
                         <div style={{
                             color: '#6b5e5e', fontFamily: 'Crimson Pro, serif',
@@ -164,7 +165,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                 </span>
 
                 <span style={{ fontFamily: 'Crimson Pro, serif', fontSize: 14, color: '#c9ad87', textAlign: 'right' }}>
-                    🪙 {player.balance}
+                    <Icon name="coin" size={13} /> {player.balance}
                 </span>
             </div>
 
@@ -184,7 +185,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                     borderRadius: 4, fontFamily: 'Cinzel, serif', fontSize: 11, letterSpacing: 1,
                     border: `1px solid ${result.color}40`,
                 }}>
-                    {result.label}
+                    <Icon name={result.icon} size={11} color={result.color} /> {result.label}
                 </div>
             ) : isOut ? (
                 <div style={{
