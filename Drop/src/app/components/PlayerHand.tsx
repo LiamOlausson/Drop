@@ -86,7 +86,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                             {scoreDisplay}
                         </span>
                         <span style={{ fontFamily: 'Crimson Pro, serif', fontSize: 12, color: 'rgba(201,173,135,0.7)', textAlign: 'right' }}>
-                            <Icon name="coin" size={13} color="#f0c040" />{player.balance}
+                            <Icon name="coin" size={13} color="#f0c040" /> {player.balance}
                         </span>
                     </div>
 
