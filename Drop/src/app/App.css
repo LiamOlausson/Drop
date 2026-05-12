@@ -304,3 +304,20 @@ select:focus, input:focus { border-color: var(--candle); }
 .action-tile-snitch::after    { background: radial-gradient(ellipse 85% 55% at 50% 100%, rgba(122,106,42,0.35)  0%, transparent 75%); }
 .action-tile-smuggle::after   { background: radial-gradient(ellipse 85% 55% at 50% 100%, rgba(106,74,140,0.35)  0%, transparent 75%); }
 .action-tile-sabotage::after  { background: radial-gradient(ellipse 85% 55% at 50% 100%, rgba(140,106,42,0.35)  0%, transparent 75%); }
+
+/* ── Card rank tooltip (U-03) ── */
+@keyframes tooltipIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+.card-rank-tooltip {
+    pointer-events: none;
+    z-index: 9999;
+    max-width: 210px;
+    background: linear-gradient(160deg, rgba(22,16,10,0.98) 0%, rgba(14,10,6,0.98) 100%);
+    border: 1px solid rgba(240,192,64,0.3);
+    border-radius: 8px;
+    padding: 10px 12px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.8), 0 2px 8px rgba(0,0,0,0.6);
+    animation: tooltipIn 0.15s ease-out forwards;
+}

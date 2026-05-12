@@ -18,6 +18,9 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
     const [fallenSmoke, setFallenSmoke] = useState(false);
     const prevLog = useRef(gameState.lastActionLog);
 
+    const [displayPot, setDisplayPot] = useState(gameState.pot);
+    const displayPotRef = useRef(gameState.pot);
+
     useEffect(() => {
         const log = gameState.lastActionLog;
         if (!log || log === prevLog.current) return;
@@ -32,6 +35,22 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
             setTimeout(() => setFallenSmoke(false), 900);
         }
     }, [gameState.lastActionLog]);
+
+    useEffect(() => {
+        const target = gameState.pot;
+        const start = displayPotRef.current;
+        if (start === target) return;
+        const startTime = performance.now();
+        const animate = (now: number) => {
+            const t = Math.min((now - startTime) / 400, 1);
+            const eased = 1 - Math.pow(1 - t, 3);
+            const current = Math.round(start + (target - start) * eased);
+            displayPotRef.current = current;
+            setDisplayPot(current);
+            if (t < 1) requestAnimationFrame(animate);
+        };
+        requestAnimationFrame(animate);
+    }, [gameState.pot]);
 
     const phaseLabel: Record<string, string> = {
         'Setup':            '— Waiting for players —',
@@ -107,7 +126,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
                         fontFamily: 'Cinzel, serif', fontWeight: 700,
                         fontSize: 22, color: '#f0c040',
                         textShadow: '0 0 10px rgba(240,192,64,0.4)',
-                    }}>{gameState.pot}</span>
+                    }}>{displayPot}</span>
                     <span style={{
                         fontFamily: 'Cinzel, serif', fontSize: 11,
                         color: 'rgba(240,192,64,0.5)', letterSpacing: 2,

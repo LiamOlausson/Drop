@@ -1,5 +1,5 @@
 // src/app/views/JudgementView.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from '../components/Card';
 import { Icon, type IconName } from '../components/Icon';
 import type { DropGameState } from '../../game/types';
@@ -20,7 +20,6 @@ const RESULT_STYLE: Record<string, { icon: IconName; label: string; color: strin
 
 export const JudgementView: React.FC<JudgementViewProps> = ({ gameState, userId, playerNames, executeAction }) => {
     const myResult = gameState.players[userId]?.handResult;
-    const myCfg    = myResult ? RESULT_STYLE[myResult] : null;
     const getName  = (id: string) => gameState.assignedNames?.[id] || playerNames[id] || id.substring(0, 10) + '…';
     const isHost = gameState.hostId === userId || (!gameState.hostId && gameState.turnOrder[0] === userId);
     const isLeader = gameState.turnOrder[gameState.handLeaderIndex] === userId;
@@ -28,6 +27,33 @@ export const JudgementView: React.FC<JudgementViewProps> = ({ gameState, userId,
 
     const brokeIds   = gameState.turnOrder.filter(id => gameState.players[id].balance < anteAmount);
     const canStart   = gameState.turnOrder.length - brokeIds.length >= 2;
+
+    // U-10: sequential reveal
+    const activePlayerIds = gameState.turnOrder.filter(id => !gameState.players[id].isSittingOut);
+    const totalCards = activePlayerIds.length * 3;
+    const [revealedCount, setRevealedCount] = useState(0);
+
+    useEffect(() => {
+        if (revealedCount >= totalCards) return;
+        const delay = revealedCount === 0 ? 600 : 350;
+        const t = setTimeout(() => setRevealedCount(c => c + 1), delay);
+        return () => clearTimeout(t);
+    }, [revealedCount, totalCards]);
+
+    const isCardRevealed = (activeIndex: number, cardIndex: number) =>
+        activeIndex < 0 || revealedCount >= activeIndex * 3 + cardIndex + 1;
+
+    const isPlayerFullyRevealed = (activeIndex: number) =>
+        activeIndex < 0 || revealedCount >= (activeIndex + 1) * 3;
+
+    // U-05: balance delta lookup
+    const handResultMap = Object.fromEntries(
+        (gameState.handResults ?? []).map(r => [r.playerId, r])
+    );
+
+    const myActiveIndex = activePlayerIds.indexOf(userId);
+    const myFullyRevealed = isPlayerFullyRevealed(myActiveIndex);
+    const myCfg = myResult && myFullyRevealed ? RESULT_STYLE[myResult] : null;
 
     return (
         // viewport-locked, inner content scrolls
@@ -39,7 +65,7 @@ export const JudgementView: React.FC<JudgementViewProps> = ({ gameState, userId,
             {/* Judgement atmosphere — deep vignette */}
             <div className="judgement-vignette" />
             {/* Baron victory — warm golden wash */}
-            {myResult === 'Baron' && <div className="baron-flood" />}
+            {myResult === 'Baron' && myFullyRevealed && <div className="baron-flood" />}
 
             {/* Header */}
             <div style={{
@@ -67,7 +93,7 @@ export const JudgementView: React.FC<JudgementViewProps> = ({ gameState, userId,
                 gap: 16, padding: '16px 20px 20px',
             }}>
 
-                {/* Your result banner */}
+                {/* Your result banner — shown only once your cards are fully revealed */}
                 {myCfg && (
                     <div style={{
                         background: myCfg.bg, border: `2px solid ${myCfg.border}`,
@@ -107,79 +133,114 @@ export const JudgementView: React.FC<JudgementViewProps> = ({ gameState, userId,
                     <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg, rgba(240,192,64,0.2), transparent)' }} />
                 </div>
 
-                {/* All player results */}
-                <div style={{
-                    display: 'flex', flexWrap: 'wrap', gap: 12,
-                    justifyContent: 'center', width: '100%',
-                }}>
-                    {gameState.turnOrder.map(playerId => {
-                        const p         = gameState.players[playerId];
-                        const satOut    = !!p.isSittingOut;
-                        const res       = satOut
-                            ? RESULT_STYLE.SatOut
-                            : (p.handResult ? RESULT_STYLE[p.handResult] : RESULT_STYLE.Dead);
-                        const score     = p.hand.reduce((s, c) => s + c.value, 0);
-                        const isYou     = playerId === userId;
-                        const isDead    = !satOut && p.handResult === 'Dead';
+                {/* All player results — tap to reveal all */}
+                <div
+                    onClick={revealedCount < totalCards ? () => setRevealedCount(totalCards) : undefined}
+                    style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, width: '100%', cursor: revealedCount < totalCards ? 'pointer' : undefined }}
+                >
+                    {revealedCount < totalCards && (
+                        <p style={{
+                            fontFamily: 'Crimson Pro, serif', fontStyle: 'italic',
+                            fontSize: 12, color: 'rgba(201,173,135,0.35)',
+                            margin: 0, letterSpacing: 1,
+                        }}>tap to reveal all</p>
+                    )}
+                    <div style={{
+                        display: 'flex', flexWrap: 'wrap', gap: 12,
+                        justifyContent: 'center', width: '100%',
+                    }}>
+                        {gameState.turnOrder.map(playerId => {
+                            const p         = gameState.players[playerId];
+                            const satOut    = !!p.isSittingOut;
+                            const res       = satOut
+                                ? RESULT_STYLE.SatOut
+                                : (p.handResult ? RESULT_STYLE[p.handResult] : RESULT_STYLE.Dead);
+                            const score     = p.hand.reduce((s, c) => s + c.value, 0);
+                            const isYou     = playerId === userId;
+                            const isDead    = !satOut && p.handResult === 'Dead';
+                            const activeIdx = activePlayerIds.indexOf(playerId);
+                            const fullyRev  = isPlayerFullyRevealed(activeIdx);
+                            const hr        = handResultMap[playerId];
 
-                        return (
-                            <div key={playerId} style={{
-                                display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
-                                padding: '12px 16px',
-                                background: res.bg, border: `1px solid ${res.border}`,
-                                borderRadius: 10, minWidth: 150,
-                                boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
-                                position: 'relative', overflow: 'hidden',
-                                filter: isDead ? 'grayscale(0.65) brightness(0.72)' : satOut ? 'grayscale(0.8) brightness(0.55)' : undefined,
-                                opacity: satOut ? 0.7 : 1,
-                                transition: 'filter 0.9s ease',
-                            }}>
-                                {/* Dead sludge overlay */}
-                                {isDead && (
-                                    <div style={{
-                                        position: 'absolute', inset: 0, borderRadius: 10,
-                                        background: 'rgba(8,5,3,0.45)', pointerEvents: 'none', zIndex: 5,
-                                        animation: 'sludge-in 0.9s ease forwards',
-                                    }} />
-                                )}
-                                <div style={{ textAlign: 'center', position: 'relative', zIndex: 6 }}>
-                                    <div style={{
-                                        fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 0.5,
-                                        color: isYou ? '#f0c040' : '#c9ad87', fontWeight: isYou ? 700 : 400,
-                                    }}>
-                                        <Icon name={res.icon} size={10} color={res.color} /> {getName(playerId)}{isYou ? ' (You)' : ''}
+                            return (
+                                <div key={playerId} style={{
+                                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
+                                    padding: '12px 16px',
+                                    background: res.bg, border: `1px solid ${res.border}`,
+                                    borderRadius: 10, minWidth: 150,
+                                    boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
+                                    position: 'relative', overflow: 'hidden',
+                                    filter: isDead ? 'grayscale(0.65) brightness(0.72)' : satOut ? 'grayscale(0.8) brightness(0.55)' : undefined,
+                                    opacity: satOut ? 0.7 : 1,
+                                    transition: 'filter 0.9s ease',
+                                }}>
+                                    {/* Dead sludge overlay */}
+                                    {isDead && (
+                                        <div style={{
+                                            position: 'absolute', inset: 0, borderRadius: 10,
+                                            background: 'rgba(8,5,3,0.45)', pointerEvents: 'none', zIndex: 5,
+                                            animation: 'sludge-in 0.9s ease forwards',
+                                        }} />
+                                    )}
+                                    <div style={{ textAlign: 'center', position: 'relative', zIndex: 6 }}>
+                                        <div style={{
+                                            fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 0.5,
+                                            color: isYou ? '#f0c040' : '#c9ad87', fontWeight: isYou ? 700 : 400,
+                                        }}>
+                                            <Icon name={res.icon} size={10} color={res.color} /> {getName(playerId)}{isYou ? ' (You)' : ''}
+                                        </div>
+                                        <div style={{
+                                            fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 2,
+                                            color: res.color, textTransform: 'uppercase', marginTop: 2,
+                                        }}>{res.label}</div>
                                     </div>
-                                    <div style={{
-                                        fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 2,
-                                        color: res.color, textTransform: 'uppercase', marginTop: 2,
-                                    }}>{res.label}</div>
+                                    {satOut ? (
+                                        <div style={{
+                                            fontFamily: 'Crimson Pro, serif', fontStyle: 'italic',
+                                            fontSize: 11, color: 'rgba(201,173,135,0.35)',
+                                            position: 'relative', zIndex: 6,
+                                        }}>insufficient funds</div>
+                                    ) : (
+                                        <>
+                                            <div style={{ display: 'flex', gap: 4, position: 'relative', zIndex: 6 }}>
+                                                {p.hand.map((c, ci) => (
+                                                    <Card
+                                                        key={c.id}
+                                                        card={c}
+                                                        size="sm"
+                                                        hidden={!isCardRevealed(activeIdx, ci)}
+                                                    />
+                                                ))}
+                                            </div>
+                                            {fullyRev && (
+                                                <div style={{ textAlign: 'center', position: 'relative', zIndex: 6, animation: 'fadeUp 0.3s ease-out forwards' }}>
+                                                    <div style={{
+                                                        fontFamily: 'Cinzel, serif', fontWeight: 900, fontSize: 20,
+                                                        color: res.color, lineHeight: 1,
+                                                    }}>{score}</div>
+                                                    <div style={{ fontFamily: 'Crimson Pro, serif', fontStyle: 'italic', fontSize: 11, color: 'rgba(201,173,135,0.5)' }}>pts</div>
+                                                </div>
+                                            )}
+                                            {/* U-05: balance delta */}
+                                            {fullyRev && hr && hr.coinsChanged !== 0 && (
+                                                <div style={{
+                                                    fontFamily: 'Cinzel, serif', fontWeight: 700, fontSize: 13,
+                                                    color: hr.coinsChanged > 0 ? '#6abf6a' : '#e05050',
+                                                    position: 'relative', zIndex: 6,
+                                                    animation: 'fadeUp 0.4s ease-out forwards',
+                                                }}>
+                                                    {hr.coinsChanged > 0 ? '+' : ''}{hr.coinsChanged}
+                                                </div>
+                                            )}
+                                        </>
+                                    )}
+                                    <div style={{ fontFamily: 'Crimson Pro, serif', fontSize: 12, color: 'rgba(201,173,135,0.6)', position: 'relative', zIndex: 6 }}>
+                                        <Icon name="coin" size={12} color="#f0c040" /> {p.balance}
+                                    </div>
                                 </div>
-                                {satOut ? (
-                                    <div style={{
-                                        fontFamily: 'Crimson Pro, serif', fontStyle: 'italic',
-                                        fontSize: 11, color: 'rgba(201,173,135,0.35)',
-                                        position: 'relative', zIndex: 6,
-                                    }}>insufficient funds</div>
-                                ) : (
-                                    <>
-                                        <div style={{ display: 'flex', gap: 4, position: 'relative', zIndex: 6 }}>
-                                            {p.hand.map(c => <Card key={c.id} card={c} size="sm" />)}
-                                        </div>
-                                        <div style={{ textAlign: 'center', position: 'relative', zIndex: 6 }}>
-                                            <div style={{
-                                                fontFamily: 'Cinzel, serif', fontWeight: 900, fontSize: 20,
-                                                color: res.color, lineHeight: 1,
-                                            }}>{score}</div>
-                                            <div style={{ fontFamily: 'Crimson Pro, serif', fontStyle: 'italic', fontSize: 11, color: 'rgba(201,173,135,0.5)' }}>pts</div>
-                                        </div>
-                                    </>
-                                )}
-                                <div style={{ fontFamily: 'Crimson Pro, serif', fontSize: 12, color: 'rgba(201,173,135,0.6)', position: 'relative', zIndex: 6 }}>
-                                    <Icon name="coin" size={12} color="#f0c040" /> {p.balance}
-                                </div>
-                            </div>
-                        );
-                    })}
+                            );
+                        })}
+                    </div>
                 </div>
 
                 {gameState.pot > 0 && (
