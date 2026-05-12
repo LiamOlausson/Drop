@@ -378,6 +378,7 @@ export const ActiveGameView: React.FC<ActiveGameViewProps> = ({ gameState, userI
                                             isCurrentPlayer={true}
                                             isActiveTurn={gameState.turnOrder[gameState.currentTurnIndex] === userId}
                                             displayName={getName(userId)}
+                                            dealIndex={gameState.turnOrder.indexOf(userId)}
                                         />
                                     </div>
 
@@ -432,6 +433,7 @@ export const ActiveGameView: React.FC<ActiveGameViewProps> = ({ gameState, userI
                                             displayName={getName(opponentId)}
                                             compact={true}
                                             lastActionLog={gameState.lastActionLog}
+                                            dealIndex={gameState.turnOrder.indexOf(opponentId)}
                                         />
                                     ))}
                                 </div>

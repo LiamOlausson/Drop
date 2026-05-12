@@ -321,3 +321,25 @@ select:focus, input:focus { border-color: var(--candle); }
     box-shadow: 0 8px 32px rgba(0,0,0,0.8), 0 2px 8px rgba(0,0,0,0.6);
     animation: tooltipIn 0.15s ease-out forwards;
 }
+
+/* ── A-04: Fallen pile atmosphere ── */
+@keyframes fallen-seethe {
+    0%, 100% { opacity: 0.45; }
+    50%       { opacity: 0.8; }
+}
+
+/* ── A-05: Baron victory splash ── */
+@keyframes baron-crown-in {
+    0%   { transform: scale(0.15) rotate(-18deg); opacity: 0; }
+    55%  { transform: scale(1.22) rotate(7deg);   opacity: 1; }
+    75%  { transform: scale(0.93) rotate(-2deg); }
+    100% { transform: scale(1)    rotate(0deg);   opacity: 1; }
+}
+@keyframes baron-text-in {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes baron-splash-out {
+    0%, 60% { opacity: 1; }
+    100%    { opacity: 0; }
+}
