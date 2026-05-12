@@ -1,5 +1,6 @@
 // src/app/components/ActionMenu.tsx
 import React, { useState } from 'react';
+import { Icon, type IconName } from './Icon';
 import type { DropGameState, ActionType } from '../../game/types';
 
 interface ActionMenuProps {
@@ -11,13 +12,13 @@ interface ActionMenuProps {
 
 type SubAction = ActionType | null;
 
-const ACTIONS: Array<{ id: ActionType; label: string; desc: string; color: string }> = [
-    { id: 'Scavenge', label: 'Scavenge',  desc: 'Swap a card with the Discard or Fallen pile.',       color: '#6a8c4a' },
-    { id: 'Dive',     label: 'Dive',  desc: 'Discard 2, pay ante, draw 2 from the deck.',          color: '#4a6a8c' },
-    { id: 'Ascend',   label: 'Ascend',  desc: 'Raise the stakes. Others must call or fold.',          color: '#8c4a4a' },
-    { id: 'Snitch',   label: 'Snitch',  desc: 'Force a target to reveal their highest or lowest.',    color: '#7a6a2a' },
-    { id: 'Smuggle',  label: 'Smuggle',  desc: 'Drop a card face-down, declare its rank.',            color: '#6a4a8c' },
-    { id: 'Sabotage', label: 'Sabotage',  desc: "Choose an opponent's card to cast to the Fallen pile.",color: '#8c6a2a' },
+const ACTIONS: Array<{ id: ActionType; label: string; desc: string; color: string; icon: IconName; cls: string }> = [
+    { id: 'Scavenge', label: 'Scavenge', desc: 'Swap a card with the Discard or Fallen pile.',        color: '#6a8c4a', icon: 'swap',  cls: 'action-tile-scavenge' },
+    { id: 'Dive',     label: 'Dive',     desc: 'Discard 2, pay ante, draw 2 from the deck.',          color: '#4a6a8c', icon: 'plunge',    cls: 'action-tile-dive'     },
+    { id: 'Ascend',   label: 'Ascend',   desc: 'Raise the stakes. Others must call or fold.',         color: '#8c4a4a', icon: 'flame',   cls: 'action-tile-ascend'   },
+    { id: 'Snitch',   label: 'Snitch',   desc: 'Force a target to reveal their highest or lowest.',   color: '#cda716', icon: 'accuse',     cls: 'action-tile-snitch'   },
+    { id: 'Smuggle',  label: 'Smuggle',  desc: 'Drop a card face-down, declare its rank.',            color: '#6a4a8c', icon: 'shroud',    cls: 'action-tile-smuggle'  },
+    { id: 'Sabotage', label: 'Sabotage', desc: "Choose an opponent's card to cast to the Fallen pile.", color: '#8c6a2a', icon: 'dagger', cls: 'action-tile-sabotage' },
 ];
 
 export const ActionMenu: React.FC<ActionMenuProps> = ({ gameState, playerId, playerNames, onAction }) => {
@@ -260,11 +261,11 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({ gameState, playerId, pla
                 <p style={descStyle}>
                     <strong style={{ color: '#f0c040' }}>{getName(asc.initiatorId)}</strong>{' '}
                     has Ascended. Pay{' '}
-                    <strong style={{ color: '#c0932b' }}>{amountToCall} 🪙</strong> to stay.
+                    <strong style={{ color: '#c0932b' }}>{amountToCall} <Icon name="coin" size={13} color="#f0c040" /></strong> to stay.
                 </p>
                 <div style={rowStyle}>
                     <TavernBtn color="mold" onClick={() => onAction('RespondAscend', { response: 'Call' })}>
-                        Climb — {amountToCall} 🪙
+                        Climb — {amountToCall} <Icon name="coin" size={13} color="#f0c040" />
                     </TavernBtn>
                     <TavernBtn color="blood" onClick={() => onAction('RespondAscend', { response: 'Fold' })}>
                         Go To The Bridge
@@ -316,7 +317,7 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({ gameState, playerId, pla
                 />
                 <div style={rowStyle}>
                     <TavernBtn color="candle" onClick={() => { onAction('Ascend', { raiseAmount }); back(); }}>
-                        Confirm +{raiseAmount} 🪙
+                        Confirm +{raiseAmount} <Icon name="coin" size={13} color="#f0c040" />
                     </TavernBtn>
                     <BackLink onClick={back} />
                 </div>
@@ -449,7 +450,7 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({ gameState, playerId, pla
                     />
                     <div style={rowStyle}>
                         <TavernBtn color="blood" onClick={() => { onAction('Ascend', { raiseAmount }); back(); }}>
-                            Ascend +{raiseAmount} 🪙
+                            Ascend +{raiseAmount} <Icon name="coin" size={13} color="#f0c040" />
                         </TavernBtn>
                         <BackLink onClick={back} />
                     </div>
@@ -622,26 +623,40 @@ const TavernBtn: React.FC<{
 };
 
 const ActionTile: React.FC<{ action: typeof ACTIONS[0]; onClick: () => void }> = ({ action, onClick }) => (
-    <button onClick={onClick} title={action.desc} style={{
-        background: 'rgba(26,20,16,0.8)',
-        border: `1px solid rgba(60,46,30,0.8)`,
-        borderBottom: `2px solid ${action.color}60`,
-        borderRadius: 8, padding: '9px 6px',
-        color: '#c9ad87', cursor: 'pointer',
-        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
-        transition: 'all 0.2s ease',
-    }}
-            onMouseOver={e => {
-                e.currentTarget.style.background = `${action.color}18`;
-                e.currentTarget.style.color = '#f0c040';
-                e.currentTarget.style.transform = 'translateY(-2px)';
-            }}
-            onMouseOut={e => {
-                e.currentTarget.style.background = 'rgba(26,20,16,0.8)';
-                e.currentTarget.style.color = '#c9ad87';
-                e.currentTarget.style.transform = 'translateY(0)';
-            }}>
-        <span style={{ fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 0.5, textTransform: 'uppercase' }}>
+    <button
+        onClick={onClick}
+        title={action.desc}
+        className={`action-tile ${action.cls}`}
+        style={{
+            background: `linear-gradient(180deg, rgba(26,20,16,0.9) 0%, ${action.color}12 100%)`,
+            border: `1px solid ${action.color}45`,
+            borderBottom: `3px solid ${action.color}90`,
+            borderRadius: 8,
+            padding: '13px 8px 11px',
+            color: '#c9ad87', cursor: 'pointer',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
+            transition: 'all 0.2s ease',
+            boxShadow: `inset 0 1px 0 rgba(255,255,255,0.04)`,
+        }}
+        onMouseOver={e => {
+            e.currentTarget.style.background = `linear-gradient(180deg, ${action.color}22 0%, ${action.color}35 100%)`;
+            e.currentTarget.style.color = '#f0c040';
+            e.currentTarget.style.transform = 'translateY(-3px)';
+            e.currentTarget.style.boxShadow = `0 6px 18px ${action.color}40, inset 0 1px 0 rgba(255,255,255,0.06)`;
+            e.currentTarget.style.borderColor = `${action.color}`;
+            e.currentTarget.style.borderBottomColor = action.color;
+        }}
+        onMouseOut={e => {
+            e.currentTarget.style.background = `linear-gradient(180deg, rgba(26,20,16,0.9) 0%, ${action.color}12 100%)`;
+            e.currentTarget.style.color = '#c9ad87';
+            e.currentTarget.style.transform = 'translateY(0)';
+            e.currentTarget.style.boxShadow = `inset 0 1px 0 rgba(255,255,255,0.04)`;
+            e.currentTarget.style.borderColor = `${action.color}45`;
+            e.currentTarget.style.borderBottomColor = `${action.color}90`;
+        }}
+    >
+        <Icon name={action.icon} size={20} color={action.color} style={{ opacity: 0.9, transition: 'opacity 0.2s' }} />
+        <span style={{ fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 0.8, textTransform: 'uppercase', lineHeight: 1 }}>
             {action.label}
         </span>
     </button>
@@ -698,7 +713,7 @@ const AscendInput: React.FC<{
                 onMouseOver={e => { e.currentTarget.style.background = 'rgba(139,26,26,0.35)'; }}
                 onMouseOut={e  => { e.currentTarget.style.background = 'rgba(139,26,26,0.2)'; }}
         >
-            ALL IN — {playerBalance} 🪙
+            ALL IN — {playerBalance} <Icon name="coin" size={13} color="#f0c040" />
         </button>
     </div>
 );

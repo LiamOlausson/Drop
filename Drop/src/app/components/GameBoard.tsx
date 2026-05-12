@@ -1,6 +1,7 @@
 // src/app/components/GameBoard.tsx
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Card } from './Card';
+import { Icon } from './Icon';
 import type { DropGameState } from '../../game/types';
 
 interface GameBoardProps {
@@ -12,6 +13,25 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
         ? gameState.discardPile[gameState.discardPile.length - 1] : undefined;
     const topFallen  = gameState.fallenPile.length > 0
         ? gameState.fallenPile[gameState.fallenPile.length - 1] : undefined;
+
+    const [sumpPulsing, setSumpPulsing] = useState(false);
+    const [fallenSmoke, setFallenSmoke] = useState(false);
+    const prevLog = useRef(gameState.lastActionLog);
+
+    useEffect(() => {
+        const log = gameState.lastActionLog;
+        if (!log || log === prevLog.current) return;
+        prevLog.current = log;
+
+        if (log.text.includes('Ante') || log.text.includes('Climbed') || log.text.includes('Ascended') || log.text.includes('Dove')) {
+            setSumpPulsing(true);
+            setTimeout(() => setSumpPulsing(false), 700);
+        }
+        if (log.text.includes('Smuggled')) {
+            setFallenSmoke(true);
+            setTimeout(() => setFallenSmoke(false), 900);
+        }
+    }, [gameState.lastActionLog]);
 
     const phaseLabel: Record<string, string> = {
         'Setup':            '— Waiting for players —',
@@ -79,9 +99,10 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
                     border: '2px solid rgba(240,192,64,0.4)',
                     borderRadius: 40, padding: '8px 32px',
                     boxShadow: '0 0 20px rgba(240,192,64,0.15), 0 4px 12px rgba(0,0,0,0.6)',
+                    animation: sumpPulsing ? 'sump-pulse 0.65s ease forwards' : undefined,
                     display: 'flex', alignItems: 'center', gap: 10,
                 }}>
-                    <span style={{ fontSize: 20 }}>🪙</span>
+                    <Icon name="coin" size={20} color="#f0c040" />
                     <span style={{
                         fontFamily: 'Cinzel, serif', fontWeight: 700,
                         fontSize: 22, color: '#f0c040',
@@ -102,7 +123,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
             }}>
                 <Pile label="Discard" count={gameState.discardPile.length} card={topDiscard} />
                 <Pile label="Draw" count={gameState.drawPile.length} hidden />
-                <Pile label="Fallen" count={gameState.fallenPile.length} card={topFallen} hidden />
+                <Pile label="Fallen" count={gameState.fallenPile.length} card={topFallen} hidden smoke={fallenSmoke} />
             </div>
 
             {/* Footer info bar */}
@@ -113,7 +134,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
                 position: 'relative', zIndex: 1,
             }}>
                 <span style={{ fontFamily: 'Crimson Pro, serif', fontSize: 13, color: 'rgba(201,173,135,0.6)', fontStyle: 'italic' }}>
-          Current Bet Amount (per person): <strong style={{ color: '#c9ad87' }}>{gameState.currentAnteToCall} 🪙</strong>
+          Current Bet Amount (per person): <strong style={{ color: '#c9ad87' }}>{gameState.currentAnteToCall} <Icon name="coin" size={13} color="#f0c040" /></strong>
         </span>
             </div>
         </div>
@@ -125,7 +146,8 @@ const Pile: React.FC<{
     count: number;
     card?: any;
     hidden?: boolean;
-}> = ({ label, count, card, hidden }) => (
+    smoke?: boolean;
+}> = ({ label, count, card, hidden, smoke }) => (
     <div style={{
         display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
     }}>
@@ -134,11 +156,22 @@ const Pile: React.FC<{
         color: 'rgba(240,192,64,0.5)', textTransform: 'uppercase',
     }}>{label}</span>
 
-        {(card || hidden) && count > 0 ? (
-            <Card card={card} hidden={hidden} size="md" />
-        ) : (
-            <EmptyPile />
-        )}
+        <div style={{ position: 'relative' }}>
+            {(card || hidden) && count > 0 ? (
+                <Card card={card} hidden={hidden} size="md" />
+            ) : (
+                <EmptyPile />
+            )}
+            {/* Smuggle smoke effect on Fallen pile */}
+            {smoke && (
+                <div style={{
+                    position: 'absolute', inset: 0, borderRadius: 8,
+                    animation: 'smoke-in 0.9s ease forwards',
+                    pointerEvents: 'none', zIndex: 10,
+                    background: 'radial-gradient(ellipse 80% 80% at 50% 50%, rgba(8,5,3,0.6) 0%, transparent 70%)',
+                }} />
+            )}
+        </div>
 
         <span style={{
             fontFamily: 'Crimson Pro, serif', fontStyle: 'italic',

@@ -6,6 +6,7 @@ import { LobbyView } from './views/LobbyView';
 import { ActiveGameView } from './views/ActiveGameView';
 import { JudgementView } from './views/JudgementView';
 import { AdminView } from './views/AdminView';
+import { DustParticles } from './components/DustParticles';
 
 export const Activity = () => {
     const { authenticated, discordSdk, status } = useDiscordSdk();
@@ -20,6 +21,13 @@ export const Activity = () => {
             if (channel.name) setChannelName(channel.name);
         });
     }, [authenticated, discordSdk]);
+
+    // Toggle body class for phase-specific ambient glow
+    const phase = gameState?.phase;
+    useEffect(() => {
+        document.body.classList.toggle('phase-climb', phase === 'The Climb' || phase === 'Battle');
+        return () => { document.body.classList.remove('phase-climb'); };
+    }, [phase]);
 
     if (!isReady || !userId) {
         return (
@@ -49,6 +57,11 @@ export const Activity = () => {
             overflow: 'hidden',
             zIndex: 1,
         }}>
+            {/* Always-on ambient layer */}
+            <DustParticles />
+            {/* Climb phase breathing glow */}
+            {(phase === 'The Climb' || phase === 'Battle') && <div className="phase-climb-glow" />}
+
             {isAdminOpen && <AdminView onClose={() => setIsAdminOpen(false)} />}
 
             {!gameState ? (

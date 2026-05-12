@@ -1,6 +1,7 @@
 // src/app/components/PlayerHand.tsx
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Card } from './Card';
+import { Icon, type IconName } from './Icon';
 import type { PlayerState } from '../../game/types';
 
 interface PlayerHandProps {
@@ -9,16 +10,17 @@ interface PlayerHandProps {
     isActiveTurn?: boolean;
     displayName?: string;
     compact?: boolean;
+    lastActionLog?: { subjectId: string; text: string; targetId?: string };
 }
 
-const RESULT_CONFIG = {
-    Baron:    { label: '♛ Baron',    bg: '#8b1a1a', color: '#f0c040' },
-    Survivor: { label: '⚔ Survivor', bg: '#1e3a1e', color: '#6abf6a' },
-    Dead:     { label: '✝ Dead',     bg: '#1a1410', color: '#6b5e5e' },
+const RESULT_CONFIG: Record<string, { icon: IconName; label: string; bg: string; color: string }> = {
+    Baron:    { icon: 'crown',   label: 'Baron',    bg: '#8b1a1a', color: '#f0c040' },
+    Survivor: { icon: 'eye',     label: 'Survivor', bg: '#1e3a1e', color: '#6abf6a' },
+    Dead:     { icon: 'obelisk', label: 'Dead',     bg: '#1a1410', color: '#6b5e5e' },
 };
 
 export const PlayerHand: React.FC<PlayerHandProps> = ({
-                                                          player, isCurrentPlayer, isActiveTurn, displayName, compact = false
+                                                          player, isCurrentPlayer, isActiveTurn, displayName, compact = false, lastActionLog
                                                       }) => {
     const result = player.handResult ? RESULT_CONFIG[player.handResult] : null;
     const isOut  = player.isDead || player.hasFolded;
@@ -27,6 +29,18 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
     const hasHidden = !isCurrentPlayer && player.hand.some(c => !c.isRevealed);
     const scoreDisplay = hasHidden ? `${score}? pts` : `${score} pts`;
 
+    const [slashed, setSlashed] = useState(false);
+    const prevLog = useRef(lastActionLog);
+
+    useEffect(() => {
+        if (!lastActionLog || lastActionLog === prevLog.current) return;
+        prevLog.current = lastActionLog;
+        if (lastActionLog.text.includes('Snitched') && lastActionLog.targetId === player.id) {
+            setSlashed(true);
+            setTimeout(() => setSlashed(false), 700);
+        }
+    }, [lastActionLog, player.id]);
+
     /* ── Compact version for side panel ── */
     if (compact) {
         return (
@@ -34,13 +48,24 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                 className={isActiveTurn ? "active-player-panel" : ""}
                 style={{
                     padding: '8px 10px',
-                    // The background and border are handed off to the CSS animation when active
                     background: isActiveTurn ? 'transparent' : 'rgba(26,20,16,0.7)',
                     border: isActiveTurn ? '1px solid transparent' : '1px solid rgba(60,46,30,0.6)',
                     borderRadius: 8,
                     opacity: isOut && !player.handResult ? 0.4 : 1,
                     transition: 'all 0.3s ease',
+                    position: 'relative', overflow: 'hidden',
                 }}>
+                {/* Snitch dagger slash */}
+                {slashed && (
+                    <div style={{
+                        position: 'absolute', top: '50%', left: 0, right: 0,
+                        height: 3, marginTop: -1,
+                        background: 'linear-gradient(90deg, transparent 0%, rgba(192,57,43,0.9) 30%, rgba(230,80,50,1) 50%, rgba(192,57,43,0.9) 70%, transparent 100%)',
+                        animation: 'slash-across 0.7s ease forwards',
+                        zIndex: 20, pointerEvents: 'none',
+                        filter: 'blur(0.5px)',
+                    }} />
+                )}
 
                 {/* Inner wrapper to elevates the content above the spinning background */}
                 <div className={isActiveTurn ? "active-player-content" : ""} style={{ display: 'flex', flexDirection: 'column' }}>
@@ -61,7 +86,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                             {scoreDisplay}
                         </span>
                         <span style={{ fontFamily: 'Crimson Pro, serif', fontSize: 12, color: 'rgba(201,173,135,0.7)', textAlign: 'right' }}>
-                            🪙{player.balance}
+                            <Icon name="coin" size={13} color="#f0c040" /> {player.balance}
                         </span>
                     </div>
 
@@ -71,7 +96,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                             background: result.bg, color: result.color, padding: '2px 8px',
                             borderRadius: 3, fontFamily: 'Cinzel, serif', fontSize: 9,
                             letterSpacing: 0.5, marginBottom: 6, display: 'inline-block', alignSelf: 'flex-start'
-                        }}>{result.label}</div>
+                        }}><Icon name={result.icon} size={9} color={result.color} /> {result.label}</div>
                     ) : isOut ? (
                         <div style={{
                             color: '#6b5e5e', fontFamily: 'Crimson Pro, serif',
@@ -164,7 +189,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                 </span>
 
                 <span style={{ fontFamily: 'Crimson Pro, serif', fontSize: 14, color: '#c9ad87', textAlign: 'right' }}>
-                    🪙 {player.balance}
+                    <Icon name="coin" size={13} color="#f0c040" /> {player.balance}
                 </span>
             </div>
 
@@ -184,7 +209,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                     borderRadius: 4, fontFamily: 'Cinzel, serif', fontSize: 11, letterSpacing: 1,
                     border: `1px solid ${result.color}40`,
                 }}>
-                    {result.label}
+                    <Icon name={result.icon} size={11} color={result.color} /> {result.label}
                 </div>
             ) : isOut ? (
                 <div style={{

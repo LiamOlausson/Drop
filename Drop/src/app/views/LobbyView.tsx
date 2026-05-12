@@ -1,5 +1,6 @@
 // src/app/views/LobbyView.tsx
 import React, { useState } from 'react';
+import { Icon, type IconName } from '../components/Icon';
 import type { ActionType } from '../../game/types';
 
 interface LobbyViewProps {
@@ -52,11 +53,13 @@ export const LobbyView: React.FC<LobbyViewProps> = ({ channelName, executeAction
                 </h1>
 
                 <div style={{ display: 'flex', justifyContent: 'center', gap: 12, marginTop: 8 }}>
-                    {['♛','⚔','☽','✦','⚖'].map((s, i) => (
+                    {(['crown', 'eye', 'moon', 'star-card', 'scales'] as IconName[]).map((name, i) => (
                         <span key={i} style={{
                             fontSize: 14, color: 'rgba(201,173,135,0.25)',
                             animationDelay: `${i * 0.3}s`,
-                        }}>{s}</span>
+                        }}>
+                            <Icon name={name} size={14} color="rgba(201,173,135,0.25)" />
+                        </span>
                     ))}
                 </div>
             </div>

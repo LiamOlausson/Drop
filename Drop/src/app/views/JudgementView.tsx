@@ -1,6 +1,7 @@
 // src/app/views/JudgementView.tsx
 import React, { useState } from 'react';
 import { Card } from '../components/Card';
+import { Icon, type IconName } from '../components/Icon';
 import type { DropGameState } from '../../game/types';
 
 interface JudgementViewProps {
@@ -10,10 +11,10 @@ interface JudgementViewProps {
     executeAction: (action: any, payload?: any) => void;
 }
 
-const RESULT_STYLE = {
-    Baron:    { icon: '♛', label: 'Baron',    color: '#f0c040', bg: 'rgba(240,192,64,0.08)',  border: 'rgba(240,192,64,0.35)' },
-    Survivor: { icon: '⚔', label: 'Survivor', color: '#6abf6a', bg: 'rgba(74,122,74,0.08)',   border: 'rgba(74,122,74,0.35)' },
-    Dead:     { icon: '✝', label: 'Dead',     color: '#6b5e5e', bg: 'rgba(26,20,16,0.8)',      border: 'rgba(60,46,30,0.4)' },
+const RESULT_STYLE: Record<string, { icon: IconName; label: string; color: string; bg: string; border: string }> = {
+    Baron:    { icon: 'crown',   label: 'Baron',    color: '#f0c040', bg: 'rgba(240,192,64,0.08)',  border: 'rgba(240,192,64,0.35)' },
+    Survivor: { icon: 'eye',     label: 'Survivor', color: '#6abf6a', bg: 'rgba(74,122,74,0.08)',   border: 'rgba(74,122,74,0.35)' },
+    Dead:     { icon: 'obelisk', label: 'Dead',     color: '#6b5e5e', bg: 'rgba(26,20,16,0.8)',      border: 'rgba(60,46,30,0.4)' },
 };
 
 export const JudgementView: React.FC<JudgementViewProps> = ({ gameState, userId, playerNames, executeAction }) => {
@@ -31,6 +32,11 @@ export const JudgementView: React.FC<JudgementViewProps> = ({ gameState, userId,
             display: 'flex', flexDirection: 'column',
             overflow: 'hidden', zIndex: 1,
         }}>
+            {/* Judgement atmosphere — deep vignette */}
+            <div className="judgement-vignette" />
+            {/* Baron victory — warm golden wash */}
+            {myResult === 'Baron' && <div className="baron-flood" />}
+
             {/* Header */}
             <div style={{
                 flexShrink: 0, textAlign: 'center',
@@ -67,14 +73,14 @@ export const JudgementView: React.FC<JudgementViewProps> = ({ gameState, userId,
                         animation: 'pulse-glow 2s ease-in-out infinite',
                         width: '100%', maxWidth: 400,
                     }}>
-                        <div style={{ fontSize: 28, marginBottom: 2 }}>{myCfg.icon}</div>
+                        <div style={{ marginBottom: 2 }}><Icon name={myCfg.icon} size={myResult === 'Dead' ? 62 : 32} color={myCfg.color} /></div>
                         <div style={{
                             fontFamily: 'Cinzel, serif', fontWeight: 900, fontSize: 20,
                             color: myCfg.color, letterSpacing: 2,
                         }}>You are the {myCfg.label}</div>
                         {myResult === 'Baron' && (
                             <p style={{ fontFamily: 'Crimson Pro, serif', fontStyle: 'italic', fontSize: 13, color: 'rgba(240,192,64,0.6)', marginTop: 3 }}>
-                                The highest hand claims the Sump.
+                                The highest hand claims the Peak.
                             </p>
                         )}
                         {myResult === 'Survivor' && (
@@ -84,7 +90,7 @@ export const JudgementView: React.FC<JudgementViewProps> = ({ gameState, userId,
                         )}
                         {myResult === 'Dead' && (
                             <p style={{ fontFamily: 'Crimson Pro, serif', fontStyle: 'italic', fontSize: 13, color: 'rgba(107,94,94,0.6)', marginTop: 3 }}>
-                                Caught in the middle — everything to the Sump.
+                                Caught in the middle, everything to the Sump.
                             </p>
                         )}
                     </div>
@@ -108,6 +114,8 @@ export const JudgementView: React.FC<JudgementViewProps> = ({ gameState, userId,
                         const score = p.hand.reduce((s, c) => s + c.value, 0);
                         const isYou = playerId === userId;
 
+                        const isDead = p.handResult === 'Dead';
+
                         return (
                             <div key={playerId} style={{
                                 display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
@@ -115,31 +123,42 @@ export const JudgementView: React.FC<JudgementViewProps> = ({ gameState, userId,
                                 background: res.bg, border: `1px solid ${res.border}`,
                                 borderRadius: 10, minWidth: 150,
                                 boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
+                                position: 'relative', overflow: 'hidden',
+                                filter: isDead ? 'grayscale(0.65) brightness(0.72)' : undefined,
+                                transition: 'filter 0.9s ease',
                             }}>
-                                <div style={{ textAlign: 'center' }}>
+                                {/* Dead sludge overlay */}
+                                {isDead && (
+                                    <div style={{
+                                        position: 'absolute', inset: 0, borderRadius: 10,
+                                        background: 'rgba(8,5,3,0.45)', pointerEvents: 'none', zIndex: 5,
+                                        animation: 'sludge-in 0.9s ease forwards',
+                                    }} />
+                                )}
+                                <div style={{ textAlign: 'center', position: 'relative', zIndex: 6 }}>
                                     <div style={{
                                         fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 0.5,
                                         color: isYou ? '#f0c040' : '#c9ad87', fontWeight: isYou ? 700 : 400,
                                     }}>
-                                        {res.icon} {getName(playerId)}{isYou ? ' (You)' : ''}
+                                        <Icon name={res.icon} size={10} color={res.color} /> {getName(playerId)}{isYou ? ' (You)' : ''}
                                     </div>
                                     <div style={{
                                         fontFamily: 'Cinzel, serif', fontSize: 8, letterSpacing: 2,
                                         color: res.color, textTransform: 'uppercase', marginTop: 2,
                                     }}>{res.label}</div>
                                 </div>
-                                <div style={{ display: 'flex', gap: 4 }}>
+                                <div style={{ display: 'flex', gap: 4, position: 'relative', zIndex: 6 }}>
                                     {p.hand.map(c => <Card key={c.id} card={c} size="sm" />)}
                                 </div>
-                                <div style={{ textAlign: 'center' }}>
+                                <div style={{ textAlign: 'center', position: 'relative', zIndex: 6 }}>
                                     <div style={{
                                         fontFamily: 'Cinzel, serif', fontWeight: 900, fontSize: 20,
                                         color: res.color, lineHeight: 1,
                                     }}>{score}</div>
                                     <div style={{ fontFamily: 'Crimson Pro, serif', fontStyle: 'italic', fontSize: 11, color: 'rgba(201,173,135,0.5)' }}>pts</div>
                                 </div>
-                                <div style={{ fontFamily: 'Crimson Pro, serif', fontSize: 12, color: 'rgba(201,173,135,0.6)' }}>
-                                    🪙 {p.balance}
+                                <div style={{ fontFamily: 'Crimson Pro, serif', fontSize: 12, color: 'rgba(201,173,135,0.6)', position: 'relative', zIndex: 6 }}>
+                                    <Icon name="coin" size={12} color="#f0c040" /> {p.balance}
                                 </div>
                             </div>
                         );
@@ -148,7 +167,7 @@ export const JudgementView: React.FC<JudgementViewProps> = ({ gameState, userId,
 
                 {gameState.pot > 0 && (
                     <div style={{ fontFamily: 'Crimson Pro, serif', fontStyle: 'italic', fontSize: 13, color: 'rgba(201,173,135,0.5)' }}>
-                        Remaining in Sump: <strong style={{ color: '#f0c040' }}>{gameState.pot} 🪙</strong>
+                        Remaining in Sump: <strong style={{ color: '#f0c040' }}>{gameState.pot} <Icon name="coin" size={13} color="#f0c040" /></strong>
                     </div>
                 )}
 
@@ -170,7 +189,7 @@ export const JudgementView: React.FC<JudgementViewProps> = ({ gameState, userId,
                                         fontFamily: 'Cinzel, serif', outline: 'none'
                                     }}
                                 />
-                                <span style={{ fontFamily: 'Crimson Pro, serif', color: '#f0c040', fontSize: 16 }}>🪙</span>
+                                <Icon name="coin" size={16} color="#f0c040" />
                             </div>
                         </div>
                     )}

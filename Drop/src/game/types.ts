@@ -146,7 +146,7 @@ export interface DropGameState {
     phase: TurnPhase;
     handResults?: HandResult[]; // Populated after Judgement; cleared at start of next hand
     pendingAscend?: AscendChallengeState;
-    lastActionLog?: { subjectId: string; text: string; };
+    lastActionLog?: { subjectId: string; text: string; targetId?: string; };
 
     // Smuggle Action
     pendingSmuggle?: SmuggleChallengeState;

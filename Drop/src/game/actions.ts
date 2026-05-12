@@ -412,7 +412,7 @@ export async function performAscend(
         playersResponded: [playerId] // initiator already responded
     };
 
-    state.lastActionLog = { subjectId: playerId, text: `Ascended (+${raiseAmount} 🪙)` };
+    state.lastActionLog = { subjectId: playerId, text: `Ascended (+${raiseAmount})` };
     await saveDropState(channelId, state);
     return true;
 }
@@ -483,7 +483,7 @@ export async function performSnitch(
     const judge = advanceTurn(state);
     if (judge) evaluateJudgementSync(state);
 
-    state.lastActionLog = { subjectId: playerId, text: `Snitched on ${getPlayerName(state, targetId)}` };
+    state.lastActionLog = { subjectId: playerId, text: `Snitched on ${getPlayerName(state, targetId)}`, targetId };
     await saveDropState(channelId, state);
     return true;
 }
@@ -522,7 +522,7 @@ export async function performSabotage(
     const judge = advanceTurn(state);
     if (judge) evaluateJudgementSync(state);
 
-    state.lastActionLog = { subjectId: playerId, text: `Sabotaged ${getPlayerName(state, targetId)}` };
+    state.lastActionLog = { subjectId: playerId, text: `Sabotaged ${getPlayerName(state, targetId)}`, targetId };
     await saveDropState(channelId, state);
     return true;
 }

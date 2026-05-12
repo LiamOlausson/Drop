@@ -1,6 +1,9 @@
 // src/app/components/Card.tsx
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import type { Card as CardType, CardRank } from '../../game/types';
+import { Icon, type IconName } from './Icon';
+
+const ICON_NAMES = new Set<string>(['coin', 'crown', 'obelisk', 'eye', 'moon', 'scales', 'star-card']);
 
 interface CardProps {
     card?: CardType;
@@ -9,12 +12,12 @@ interface CardProps {
     style?: React.CSSProperties;
 }
 
-const RANK_CONFIG: Record<CardRank, { color: string; symbol: string; glow: string }> = {
-    Baron:       { color: '#c0392b', symbol: '♛', glow: 'rgba(192,57,43,0.5)' },
-    Warden:      { color: '#c0932b', symbol: '⚔', glow: 'rgba(192,147,43,0.4)' },
-    Citizen:     { color: '#4a7a4a', symbol: '⚖', glow: 'rgba(74,122,74,0.3)' },
-    'Glow Worm': { color: '#5a8a9a', symbol: '✦', glow: 'rgba(90,138,154,0.3)' },
-    Hollow:      { color: '#6b5e8d', symbol: '☽', glow: 'rgba(107,94,141,0.35)' },
+const RANK_CONFIG: Record<CardRank, { color: string; symbol: string; glow: string; bgTint: string }> = {
+    Baron:       { color: '#c0392b', symbol: 'crown',     glow: 'rgba(192,57,43,0.5)',   bgTint: 'rgba(192,57,43,0.09)' },
+    Warden:      { color: '#c0932b', symbol: 'eye',       glow: 'rgba(192,147,43,0.4)',  bgTint: 'rgba(192,147,43,0.06)' },
+    Citizen:     { color: '#4a7a4a', symbol: 'scales',    glow: 'rgba(74,122,74,0.3)',   bgTint: 'rgba(74,122,74,0.06)' },
+    'Glow Worm': { color: '#5a8a9a', symbol: 'star-card', glow: 'rgba(90,138,154,0.3)',  bgTint: 'rgba(90,138,154,0.1)' },
+    Hollow:      { color: '#6b5e8d', symbol: 'moon',      glow: 'rgba(107,94,141,0.35)', bgTint: 'rgba(107,94,141,0.08)' },
 };
 
 const SIZE_MAP = {
@@ -25,18 +28,36 @@ const SIZE_MAP = {
 
 export const Card: React.FC<CardProps> = ({ card, hidden, size = 'md', style }) => {
     const sz = SIZE_MAP[size];
+    const [hovered, setHovered] = useState(false);
+    const prevHidden = useRef(hidden);
+    const [isFlipping, setIsFlipping] = useState(false);
+
+    useEffect(() => {
+        if (prevHidden.current === true && hidden === false) {
+            setIsFlipping(true);
+            const t = setTimeout(() => setIsFlipping(false), 320);
+            return () => clearTimeout(t);
+        }
+        prevHidden.current = hidden;
+    }, [hidden]);
 
     /* ── Card Back ── */
     if (hidden || !card) {
         return (
-            <div style={{
+            <div
+                onMouseEnter={() => setHovered(true)}
+                onMouseLeave={() => setHovered(false)}
+                style={{
                 width: sz.w, height: sz.h,
                 borderRadius: 8,
                 border: '2px solid #4a3820',
                 background: `radial-gradient(circle at 50% 50%, #2e2318 0%, #1a1410 100%)`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 flexDirection: 'column', gap: 4,
-                boxShadow: '0 4px 12px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.05)',
+                boxShadow: hovered
+                    ? '0 2px 4px rgba(0,0,0,0.95), 4px 8px 20px rgba(0,0,0,0.8), -1px -1px 0 rgba(255,255,255,0.04), 0 0 14px rgba(240,192,64,0.1)'
+                    : '0 2px 4px rgba(0,0,0,0.9), 3px 6px 16px rgba(0,0,0,0.75), -1px -1px 0 rgba(255,255,255,0.03)',
+                transition: 'box-shadow 0.2s ease',
                 position: 'relative', overflow: 'hidden',
                 flexShrink: 0,
                 ...style,
@@ -50,7 +71,7 @@ export const Card: React.FC<CardProps> = ({ card, hidden, size = 'md', style }) 
                         rgba(240,192,64,0.03) 4px, rgba(240,192,64,0.03) 5px
                     )`,
                 }} />
-                <span style={{ fontSize: sz.sym, color: 'rgba(240,192,64,0.5)', zIndex: 1, fontFamily: 'serif' }}>✦</span>
+                <Icon name="star-card" size={sz.sym} color="rgba(240,192,64,0.5)" style={{ zIndex: 1 }} />
                 <span style={{
                     fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 2,
                     color: 'rgba(240,192,64,0.35)', zIndex: 1, textTransform: 'uppercase'
@@ -63,44 +84,47 @@ export const Card: React.FC<CardProps> = ({ card, hidden, size = 'md', style }) 
 
     /* ── Card Face ── */
     return (
-        <div style={{
+        <div
+            onMouseEnter={() => setHovered(true)}
+            onMouseLeave={() => setHovered(false)}
+            style={{
             width: sz.w, height: sz.h,
             borderRadius: 8,
             background: `linear-gradient(160deg, #f0e8d0 0%, #e4d4b0 50%, #d8c496 100%)`,
-            // revealed = thicker colored border only, no banner
             border: card.isRevealed
                 ? `3px solid ${cfg.color}`
-                : '2px solid rgba(200,180,140,0.6)',
+                : '1px solid rgba(160,130,80,0.55)',
             display: 'flex', flexDirection: 'column',
             padding: 6,
             boxShadow: card.isRevealed
-                ? `0 4px 16px rgba(0,0,0,0.6), 0 0 14px ${cfg.glow}, inset 0 0 0 1px ${cfg.color}40`
-                : '0 4px 12px rgba(0,0,0,0.6)',
+                ? hovered
+                    ? `0 6px 24px rgba(0,0,0,0.7), 0 0 40px ${cfg.glow}, inset 0 0 36px ${cfg.glow}`
+                    : `0 4px 18px rgba(0,0,0,0.6), 0 0 28px ${cfg.glow}, inset 0 0 26px ${cfg.glow}`
+                : hovered
+                    ? '0 2px 4px rgba(0,0,0,0.95), 4px 8px 20px rgba(0,0,0,0.75), -1px -1px 0 rgba(255,255,255,0.05)'
+                    : '0 2px 4px rgba(0,0,0,0.9), 3px 6px 16px rgba(0,0,0,0.7), -1px -1px 0 rgba(255,255,255,0.03)',
+            transition: 'box-shadow 0.2s ease',
             position: 'relative', overflow: 'hidden',
-            animation: 'cardDeal 0.3s ease-out forwards',
+            animation: isFlipping ? 'cardFlip 0.28s cubic-bezier(0.4,0,0.2,1) forwards' : 'cardDeal 0.3s ease-out forwards',
+            filter: card.rank === 'Glow Worm' ? 'drop-shadow(0 0 4px rgba(90,138,154,0.45))' : undefined,
             flexShrink: 0,
             ...style,
         }}>
-            {/* Parchment texture lines */}
+            {/* Off-color card edge frame */}
             <div style={{
-                position: 'absolute', inset: 0, opacity: 0.15, zIndex: 0,
-                backgroundImage: `repeating-linear-gradient(
-                    transparent, transparent 11px,
-                    rgba(100,70,30,0.4) 11px, rgba(100,70,30,0.4) 12px
-                )`,
+                position: 'absolute', inset: 4,
+                borderRadius: 5,
+                border: card.isRevealed
+                    ? `2px solid ${cfg.color}70`
+                    : '1px solid rgba(150,115,55,0.25)',
+                pointerEvents: 'none', zIndex: 0,
             }} />
-
-            {/* Revealed indicator — small symbol in top-right corner only */}
-            {card.isRevealed && (
-                <div style={{
-                    position: 'absolute', top: 3, right: 4, zIndex: 3,
-                    fontSize: sz.font - 1,
-                    color: cfg.color,
-                    opacity: 0.85,
-                    lineHeight: 1,
-                    textShadow: `0 0 4px ${cfg.glow}`,
-                }}>👁</div>
-            )}
+            {/* Rank material tint overlay */}
+            <div style={{
+                position: 'absolute', inset: 0, borderRadius: 7,
+                background: cfg.bgTint,
+                pointerEvents: 'none', zIndex: 0,
+            }} />
 
             {/* Top-left corner */}
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', zIndex: 1, lineHeight: 1.1 }}>
@@ -120,9 +144,10 @@ export const Card: React.FC<CardProps> = ({ card, hidden, size = 'md', style }) 
             <div style={{
                 flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1,
             }}>
-                <span style={{ fontSize: sz.sym * 1.4, color: cfg.color, opacity: 0.7, userSelect: 'none' }}>
-                    {cfg.symbol}
-                </span>
+                {ICON_NAMES.has(cfg.symbol)
+                    ? <Icon name={cfg.symbol as IconName} size={Math.round(sz.sym * 1.4)} color={cfg.color} style={{ opacity: 0.7 }} />
+                    : <span style={{ fontSize: sz.sym * 1.4, color: cfg.color, opacity: 0.7, userSelect: 'none' }}>{cfg.symbol}</span>
+                }
             </div>
 
             {/* Bottom value */}
