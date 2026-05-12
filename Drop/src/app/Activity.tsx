@@ -5,6 +5,7 @@ import { useGameState } from '../hooks/useGameState';
 import { LobbyView } from './views/LobbyView';
 import { ActiveGameView } from './views/ActiveGameView';
 import { JudgementView } from './views/JudgementView';
+import { RankRevealView } from './views/RankRevealView';
 import { AdminView } from './views/AdminView';
 import { DustParticles } from './components/DustParticles';
 
@@ -14,6 +15,7 @@ export const Activity = () => {
     const { gameState, userId, playerNames, executeAction, actionError, isReady } = useGameState();
     const [channelName, setChannelName] = useState<string>();
     const [isAdminOpen, setIsAdminOpen] = useState(false);
+    const [rankRevealDone, setRankRevealDone] = useState(false);
 
     useEffect(() => {
         if (!authenticated || !discordSdk.channelId || !discordSdk.guildId) return;
@@ -22,8 +24,13 @@ export const Activity = () => {
         });
     }, [authenticated, discordSdk]);
 
-    // Toggle body class for phase-specific ambient glow
+    // Reset rank reveal gate whenever we leave Judgement phase
     const phase = gameState?.phase;
+    useEffect(() => {
+        if (phase !== 'Judgement') setRankRevealDone(false);
+    }, [phase]);
+
+    // Toggle body class for phase-specific ambient glow
     useEffect(() => {
         document.body.classList.toggle('phase-climb', phase === 'The Climb' || phase === 'Battle');
         return () => { document.body.classList.remove('phase-climb'); };
@@ -87,12 +94,20 @@ export const Activity = () => {
                     onOpenAdmin={() => setIsAdminOpen(true)}
                 />
             ) : gameState.phase === 'Judgement' ? (
-                <JudgementView
-                    gameState={gameState}
-                    userId={userId}
-                    playerNames={playerNames}
-                    executeAction={executeAction}
-                />
+                !rankRevealDone && !gameState.players[userId]?.isSittingOut ? (
+                    <RankRevealView
+                        result={gameState.players[userId]?.handResult}
+                        playerName={gameState.assignedNames?.[userId] || playerNames[userId] || userId.substring(0, 8) + '…'}
+                        onDone={() => setRankRevealDone(true)}
+                    />
+                ) : (
+                    <JudgementView
+                        gameState={gameState}
+                        userId={userId}
+                        playerNames={playerNames}
+                        executeAction={executeAction}
+                    />
+                )
             ) : (
                 <ActiveGameView
                     gameState={gameState}

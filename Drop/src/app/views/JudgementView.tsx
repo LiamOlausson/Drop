@@ -55,16 +55,6 @@ export const JudgementView: React.FC<JudgementViewProps> = ({ gameState, userId,
     const myFullyRevealed = isPlayerFullyRevealed(myActiveIndex);
     const myCfg = myResult && myFullyRevealed ? RESULT_STYLE[myResult] : null;
 
-    // Baron victory splash
-    const [baronSplashDone, setBaronSplashDone] = useState(false);
-    useEffect(() => {
-        if (myResult === 'Baron' && myFullyRevealed && !baronSplashDone) {
-            const t = setTimeout(() => setBaronSplashDone(true), 2800);
-            return () => clearTimeout(t);
-        }
-    }, [myResult, myFullyRevealed, baronSplashDone]);
-    const showBaronSplash = myResult === 'Baron' && myFullyRevealed && !baronSplashDone;
-
     return (
         // viewport-locked, inner content scrolls
         <div style={{
@@ -75,39 +65,7 @@ export const JudgementView: React.FC<JudgementViewProps> = ({ gameState, userId,
             {/* Judgement atmosphere — deep vignette */}
             <div className="judgement-vignette" />
             {/* Baron victory — warm golden wash */}
-            {myResult === 'Baron' && myFullyRevealed && <div className="baron-flood" />}
-
-            {/* Baron victory splash — full-screen dramatic reveal */}
-            {showBaronSplash && (
-                <div style={{
-                    position: 'fixed', inset: 0, zIndex: 50,
-                    display: 'flex', flexDirection: 'column',
-                    alignItems: 'center', justifyContent: 'center', gap: 12,
-                    background: 'radial-gradient(ellipse 120% 120% at 50% 50%, rgba(240,192,64,0.22) 0%, rgba(14,10,6,0.9) 65%)',
-                    animation: 'baron-splash-out 2.8s ease-out forwards',
-                    pointerEvents: 'none',
-                }}>
-                    <div style={{ animation: 'baron-crown-in 0.75s cubic-bezier(0.34,1.56,0.64,1) forwards' }}>
-                        <Icon name="crown" size={100} color="#f0c040" />
-                    </div>
-                    <div style={{
-                        fontFamily: 'Cinzel, serif', fontWeight: 900,
-                        fontSize: 52, letterSpacing: 8, color: '#f0c040',
-                        textShadow: '0 0 40px rgba(240,192,64,0.9), 0 0 80px rgba(240,192,64,0.35)',
-                        animation: 'baron-text-in 0.5s ease-out 0.45s both',
-                    }}>BARON</div>
-                    <div style={{
-                        fontFamily: 'IM Fell English, serif', fontStyle: 'italic',
-                        fontSize: 20, color: 'rgba(240,192,64,0.55)', letterSpacing: 4,
-                        animation: 'baron-text-in 0.5s ease-out 0.75s both',
-                    }}>Claims the Peak</div>
-                    <div style={{
-                        fontFamily: 'Cinzel, serif', fontSize: 13, letterSpacing: 2,
-                        color: 'rgba(240,192,64,0.35)', marginTop: 8,
-                        animation: 'baron-text-in 0.4s ease-out 1s both',
-                    }}>{getName(userId)}</div>
-                </div>
-            )}
+            {myResult === 'Baron' && <div className="baron-flood" />}
 
             {/* Header */}
             <div style={{
