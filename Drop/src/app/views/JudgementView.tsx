@@ -1,5 +1,5 @@
 // src/app/views/JudgementView.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card } from '../components/Card';
 import { Icon, type IconName } from '../components/Icon';
 import type { DropGameState } from '../../game/types';
@@ -17,6 +17,43 @@ const RESULT_STYLE: Record<string, { icon: IconName; label: string; color: strin
     Dead:     { icon: 'obelisk', label: 'Dead',     color: '#6b5e5e', bg: 'rgba(26,20,16,0.8)',      border: 'rgba(60,46,30,0.4)' },
     SatOut:   { icon: 'obelisk', label: 'Sat Out',  color: '#7a8595', bg: 'rgba(18,16,14,0.7)',      border: 'rgba(50,42,32,0.4)' },
 };
+
+const FLAVOR: Record<'Baron' | 'Survivor' | 'Dead', string[]> = {
+    Baron: [
+        'The highest hand claims the Peak.',
+        'Fortune favors the bold.',
+        'All debts flow to the Baron.',
+        'Every coin at the table was yours to claim.',
+        'The Sump gives to those who can take.',
+        'The Peak was never in doubt.',
+        'The Sun Smiles upon you',
+        'The Moon Sighs',
+        'The Deep is content',
+        'The Shield is wary',
+    ],
+    Survivor: [
+        'The lowest hand slips away with their coin.',
+        'Sometimes losing small is winning enough.',
+        'The wise know when to keep their head down.',
+        'Not glory, but coin. And coin endures.',
+        'The Sump wanted more.',
+        'Small hands escape the tallest falls.',
+        'Hidden Beneath the Moon',
+        'Protected By The Shield',
+    ],
+    Dead: [
+        'Caught in the middle, everything to the Sump.',
+        'Not high enough to rule, not low enough to flee.',
+        'The Sump is patient. It always collects.',
+        'Lost in the middle where no one survives.',
+        'The Sump doesn\'t mourn.',
+        'Flew Yoo Close To The Sun',
+        'Drowned in the deep',
+        'Warped Iron Breaks Violently',
+    ],
+};
+
+const pick = (arr: string[]) => arr[Math.floor(Math.random() * arr.length)];
 
 export const JudgementView: React.FC<JudgementViewProps> = ({ gameState, userId, playerNames, executeAction }) => {
     const myResult = gameState.players[userId]?.handResult;
@@ -54,6 +91,12 @@ export const JudgementView: React.FC<JudgementViewProps> = ({ gameState, userId,
     const myActiveIndex = activePlayerIds.indexOf(userId);
     const myFullyRevealed = isPlayerFullyRevealed(myActiveIndex);
     const myCfg = myResult && myFullyRevealed ? RESULT_STYLE[myResult] : null;
+
+    const flavor = useMemo(() => ({
+        Baron:    pick(FLAVOR.Baron),
+        Survivor: pick(FLAVOR.Survivor),
+        Dead:     pick(FLAVOR.Dead),
+    }), []);
 
     return (
         // viewport-locked, inner content scrolls
@@ -110,17 +153,17 @@ export const JudgementView: React.FC<JudgementViewProps> = ({ gameState, userId,
                         }}>You are the {myCfg.label}</div>
                         {myResult === 'Baron' && (
                             <p style={{ fontFamily: 'Crimson Pro, serif', fontStyle: 'italic', fontSize: 13, color: 'rgba(240,192,64,0.6)', marginTop: 3 }}>
-                                The highest hand claims the Peak.
+                                {flavor.Baron}
                             </p>
                         )}
                         {myResult === 'Survivor' && (
                             <p style={{ fontFamily: 'Crimson Pro, serif', fontStyle: 'italic', fontSize: 13, color: 'rgba(106,191,106,0.6)', marginTop: 3 }}>
-                                The lowest hand slips away with their coin.
+                                {flavor.Survivor}
                             </p>
                         )}
                         {myResult === 'Dead' && (
                             <p style={{ fontFamily: 'Crimson Pro, serif', fontStyle: 'italic', fontSize: 13, color: 'rgba(107,94,94,0.6)', marginTop: 3 }}>
-                                Caught in the middle, everything to the Sump.
+                                {flavor.Dead}
                             </p>
                         )}
                     </div>
@@ -221,7 +264,7 @@ export const JudgementView: React.FC<JudgementViewProps> = ({ gameState, userId,
                                                     <div style={{ fontFamily: 'Crimson Pro, serif', fontStyle: 'italic', fontSize: 11, color: 'rgba(201,173,135,0.5)' }}>pts</div>
                                                 </div>
                                             )}
-                                            {/* U-05: balance delta */}
+                                            {/* balance delta */}
                                             {fullyRev && hr && hr.coinsChanged !== 0 && (
                                                 <div style={{
                                                     fontFamily: 'Cinzel, serif', fontWeight: 700, fontSize: 13,

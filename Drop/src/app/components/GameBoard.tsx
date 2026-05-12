@@ -16,15 +16,17 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
 
     const [sumpPulsing, setSumpPulsing] = useState(false);
     const [fallenSmoke, setFallenSmoke] = useState(false);
-    const prevLog = useRef(gameState.lastActionLog);
+    const logKey = (l?: typeof gameState.lastActionLog) => l ? `${l.subjectId}::${l.text}` : undefined;
+    const prevLogKey = useRef(logKey(gameState.lastActionLog));
 
     const [displayPot, setDisplayPot] = useState(gameState.pot);
     const displayPotRef = useRef(gameState.pot);
 
     useEffect(() => {
         const log = gameState.lastActionLog;
-        if (!log || log === prevLog.current) return;
-        prevLog.current = log;
+        const key = logKey(log);
+        if (!log || key === prevLogKey.current) return;
+        prevLogKey.current = key;
 
         if (log.text.includes('Ante') || log.text.includes('Climbed') || log.text.includes('Ascended') || log.text.includes('Dove')) {
             setSumpPulsing(true);

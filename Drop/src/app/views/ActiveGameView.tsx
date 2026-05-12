@@ -26,12 +26,14 @@ export const ActiveGameView: React.FC<ActiveGameViewProps> = ({ gameState, userI
     const [isKickMenuOpen, setIsKickMenuOpen] = useState(false);
     const [isRulesOpen, setIsRulesOpen] = useState(false);
     const [shaking, setShaking] = useState(false);
-    const prevLog = useRef(gameState.lastActionLog);
+    const logKey = (l?: typeof gameState.lastActionLog) => l ? `${l.subjectId}::${l.text}` : undefined;
+    const prevLogKey = useRef(logKey(gameState.lastActionLog));
 
     useEffect(() => {
         const log = gameState.lastActionLog;
-        if (!log || log === prevLog.current) return;
-        prevLog.current = log;
+        const key = logKey(log);
+        if (!log || key === prevLogKey.current) return;
+        prevLogKey.current = key;
         if (log.text.includes('Sabotaged')) {
             setShaking(true);
             setTimeout(() => setShaking(false), 450);
