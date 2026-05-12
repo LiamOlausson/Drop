@@ -15,6 +15,7 @@ const RESULT_STYLE: Record<string, { icon: IconName; label: string; color: strin
     Baron:    { icon: 'crown',   label: 'Baron',    color: '#f0c040', bg: 'rgba(240,192,64,0.08)',  border: 'rgba(240,192,64,0.35)' },
     Survivor: { icon: 'eye',     label: 'Survivor', color: '#6abf6a', bg: 'rgba(74,122,74,0.08)',   border: 'rgba(74,122,74,0.35)' },
     Dead:     { icon: 'obelisk', label: 'Dead',     color: '#6b5e5e', bg: 'rgba(26,20,16,0.8)',      border: 'rgba(60,46,30,0.4)' },
+    SatOut:   { icon: 'obelisk', label: 'Sat Out',  color: '#7a8595', bg: 'rgba(18,16,14,0.7)',      border: 'rgba(50,42,32,0.4)' },
 };
 
 export const JudgementView: React.FC<JudgementViewProps> = ({ gameState, userId, playerNames, executeAction }) => {
@@ -24,6 +25,9 @@ export const JudgementView: React.FC<JudgementViewProps> = ({ gameState, userId,
     const isHost = gameState.hostId === userId || (!gameState.hostId && gameState.turnOrder[0] === userId);
     const isLeader = gameState.turnOrder[gameState.handLeaderIndex] === userId;
     const [anteAmount, setAnteAmount] = useState<number>(gameState.baseAnte || 10);
+
+    const brokeIds   = gameState.turnOrder.filter(id => gameState.players[id].balance < anteAmount);
+    const canStart   = gameState.turnOrder.length - brokeIds.length >= 2;
 
     return (
         // viewport-locked, inner content scrolls
@@ -109,12 +113,14 @@ export const JudgementView: React.FC<JudgementViewProps> = ({ gameState, userId,
                     justifyContent: 'center', width: '100%',
                 }}>
                     {gameState.turnOrder.map(playerId => {
-                        const p   = gameState.players[playerId];
-                        const res = p.handResult ? RESULT_STYLE[p.handResult] : RESULT_STYLE.Dead;
-                        const score = p.hand.reduce((s, c) => s + c.value, 0);
-                        const isYou = playerId === userId;
-
-                        const isDead = p.handResult === 'Dead';
+                        const p         = gameState.players[playerId];
+                        const satOut    = !!p.isSittingOut;
+                        const res       = satOut
+                            ? RESULT_STYLE.SatOut
+                            : (p.handResult ? RESULT_STYLE[p.handResult] : RESULT_STYLE.Dead);
+                        const score     = p.hand.reduce((s, c) => s + c.value, 0);
+                        const isYou     = playerId === userId;
+                        const isDead    = !satOut && p.handResult === 'Dead';
 
                         return (
                             <div key={playerId} style={{
@@ -124,7 +130,8 @@ export const JudgementView: React.FC<JudgementViewProps> = ({ gameState, userId,
                                 borderRadius: 10, minWidth: 150,
                                 boxShadow: '0 4px 16px rgba(0,0,0,0.5)',
                                 position: 'relative', overflow: 'hidden',
-                                filter: isDead ? 'grayscale(0.65) brightness(0.72)' : undefined,
+                                filter: isDead ? 'grayscale(0.65) brightness(0.72)' : satOut ? 'grayscale(0.8) brightness(0.55)' : undefined,
+                                opacity: satOut ? 0.7 : 1,
                                 transition: 'filter 0.9s ease',
                             }}>
                                 {/* Dead sludge overlay */}
@@ -147,16 +154,26 @@ export const JudgementView: React.FC<JudgementViewProps> = ({ gameState, userId,
                                         color: res.color, textTransform: 'uppercase', marginTop: 2,
                                     }}>{res.label}</div>
                                 </div>
-                                <div style={{ display: 'flex', gap: 4, position: 'relative', zIndex: 6 }}>
-                                    {p.hand.map(c => <Card key={c.id} card={c} size="sm" />)}
-                                </div>
-                                <div style={{ textAlign: 'center', position: 'relative', zIndex: 6 }}>
+                                {satOut ? (
                                     <div style={{
-                                        fontFamily: 'Cinzel, serif', fontWeight: 900, fontSize: 20,
-                                        color: res.color, lineHeight: 1,
-                                    }}>{score}</div>
-                                    <div style={{ fontFamily: 'Crimson Pro, serif', fontStyle: 'italic', fontSize: 11, color: 'rgba(201,173,135,0.5)' }}>pts</div>
-                                </div>
+                                        fontFamily: 'Crimson Pro, serif', fontStyle: 'italic',
+                                        fontSize: 11, color: 'rgba(201,173,135,0.35)',
+                                        position: 'relative', zIndex: 6,
+                                    }}>insufficient funds</div>
+                                ) : (
+                                    <>
+                                        <div style={{ display: 'flex', gap: 4, position: 'relative', zIndex: 6 }}>
+                                            {p.hand.map(c => <Card key={c.id} card={c} size="sm" />)}
+                                        </div>
+                                        <div style={{ textAlign: 'center', position: 'relative', zIndex: 6 }}>
+                                            <div style={{
+                                                fontFamily: 'Cinzel, serif', fontWeight: 900, fontSize: 20,
+                                                color: res.color, lineHeight: 1,
+                                            }}>{score}</div>
+                                            <div style={{ fontFamily: 'Crimson Pro, serif', fontStyle: 'italic', fontSize: 11, color: 'rgba(201,173,135,0.5)' }}>pts</div>
+                                        </div>
+                                    </>
+                                )}
                                 <div style={{ fontFamily: 'Crimson Pro, serif', fontSize: 12, color: 'rgba(201,173,135,0.6)', position: 'relative', zIndex: 6 }}>
                                     <Icon name="coin" size={12} color="#f0c040" /> {p.balance}
                                 </div>
@@ -174,14 +191,14 @@ export const JudgementView: React.FC<JudgementViewProps> = ({ gameState, userId,
                 {/* Action buttons */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 16, alignItems: 'center', paddingTop: 4 }}>
                     {(isHost || isLeader) && !gameState.forceLobby && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, alignItems: 'center', paddingTop: 4 }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center', paddingTop: 4 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                 <span style={{ fontFamily: 'Cinzel, serif', fontSize: 12, color: '#c9ad87', textTransform: 'uppercase' }}>Next Ante:</span>
                                 <input
                                     type="number"
                                     value={anteAmount}
                                     min={0}
-                                    onChange={e => setAnteAmount(parseInt(e.target.value) || 1)}
+                                    onChange={e => setAnteAmount(parseInt(e.target.value) || 0)}
                                     style={{
                                         width: 70, textAlign: 'center',
                                         background: 'rgba(26,20,16,0.8)', border: '1px solid rgba(240,192,64,0.4)',
@@ -191,6 +208,22 @@ export const JudgementView: React.FC<JudgementViewProps> = ({ gameState, userId,
                                 />
                                 <Icon name="coin" size={16} color="#f0c040" />
                             </div>
+                            {brokeIds.length > 0 && canStart && (
+                                <p style={{
+                                    fontFamily: 'Crimson Pro, serif', fontStyle: 'italic',
+                                    fontSize: 12, color: '#e0a060', textAlign: 'center', margin: 0, maxWidth: 300,
+                                }}>
+                                    {brokeIds.map(id => getName(id)).join(', ')} cannot afford this ante and will sit out.
+                                </p>
+                            )}
+                            {!canStart && (
+                                <p style={{
+                                    fontFamily: 'Crimson Pro, serif', fontStyle: 'italic',
+                                    fontSize: 12, color: '#e05050', textAlign: 'center', margin: 0, maxWidth: 300,
+                                }}>
+                                    Fewer than 2 players can afford this ante. Lower it or top up balances via the admin panel.
+                                </p>
+                            )}
                         </div>
                     )}
 
@@ -198,18 +231,20 @@ export const JudgementView: React.FC<JudgementViewProps> = ({ gameState, userId,
                         {/* Allow Leader or Host to start the next hand */}
                         {(isHost || isLeader) && !gameState.forceLobby && (
                             <button
-                                onClick={() => executeAction('StartHand', { anteAmount })}
+                                disabled={!canStart}
+                                onClick={() => canStart && executeAction('StartHand', { anteAmount })}
                                 style={{
                                     padding: '10px 28px',
-                                    background: 'rgba(240,192,64,0.12)',
-                                    border: '1px solid rgba(240,192,64,0.4)',
+                                    background: canStart ? 'rgba(240,192,64,0.12)' : 'rgba(30,20,16,0.5)',
+                                    border: `1px solid ${canStart ? 'rgba(240,192,64,0.4)' : 'rgba(60,46,30,0.4)'}`,
                                     borderRadius: 7, fontFamily: 'Cinzel, serif',
                                     fontSize: 13, fontWeight: 700, letterSpacing: 1,
-                                    color: '#f0c040', cursor: 'pointer', transition: 'all 0.2s ease',
+                                    color: canStart ? '#f0c040' : 'rgba(201,173,135,0.3)',
+                                    cursor: canStart ? 'pointer' : 'not-allowed', transition: 'all 0.2s ease',
                                 }}
-                                onMouseOver={e => { e.currentTarget.style.background = 'rgba(240,192,64,0.22)'; }}
-                                onMouseOut={e  => { e.currentTarget.style.background = 'rgba(240,192,64,0.12)'; }}
-                            > Deal Next Hand</button>
+                                onMouseOver={e => { if (canStart) e.currentTarget.style.background = 'rgba(240,192,64,0.22)'; }}
+                                onMouseOut={e  => { if (canStart) e.currentTarget.style.background = 'rgba(240,192,64,0.12)'; }}
+                            >Deal Next Hand</button>
                         )}
 
                         {/* Closure warning */}

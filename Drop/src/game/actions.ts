@@ -87,7 +87,7 @@ function evaluateJudgementSync(state: DropGameState): void {
     state.phase = 'Judgement';
     const results: HandResult[] = [];
 
-    // 1. Apply Opposing Barons Clause
+    // Apply Opposing Barons Clause
     for (const id of state.turnOrder) {
         const p = state.players[id];
         if (p.isDead || p.hasFolded) continue;
@@ -100,7 +100,7 @@ function evaluateJudgementSync(state: DropGameState): void {
         }
     }
 
-    // 2. Strictly separate dead/folded players from active players
+    // Strictly separate dead/folded players from active players
     const active: PlayerState[] = [];
     for (const id of state.turnOrder) {
         const p = state.players[id];
@@ -125,13 +125,13 @@ function evaluateJudgementSync(state: DropGameState): void {
         return;
     }
 
-    // 3. Map strictly active players to their scores
+    // Map strictly active players to their scores
     const scored = active.map(p => ({
         player: p,
         score: p.hand.reduce((s, c) => s + (c.value || 0), 0)
     }));
 
-    // 4. Calculate High and Low Scores securely
+    // Calculate High and Low Scores securely
     // Filter out Glow Worm penalty players so they don't skew the high score
     const baronCandidates = scored.filter(s => !s.player.cannotBeBaron);
     const highScore = baronCandidates.length > 0
@@ -141,7 +141,7 @@ function evaluateJudgementSync(state: DropGameState): void {
     // Low score still considers all active players
     const lowScore = Math.min(...scored.map(s => s.score));
 
-    // 5. Categorize players based on the secured scores
+    // Categorize players based on the secured scores
     const barons = baronCandidates.filter(s => s.score === highScore);
 
     // A survivor only exists if there is a distinct difference between high and low score
@@ -151,7 +151,7 @@ function evaluateJudgementSync(state: DropGameState): void {
 
     const middle = scored.filter(s => !barons.includes(s) && !survivors.includes(s));
 
-    // 6. Apply payouts and final results
+    // Apply payouts and final results
     for (const { player, score } of survivors) {
         const reclaimed = Math.min(player.antePaid, state.pot);
         player.balance      += reclaimed;
@@ -218,25 +218,38 @@ export async function startHand(channelId: string, anteAmount: number): Promise<
     // Save the chosen ante for the next round's default
     state.baseAnte = anteAmount;
 
-    // Reset handResult and hand state for each player
+    // Reset hand state for every player, then sit out anyone who can't afford the ante
     for (const playerId of state.turnOrder) {
         const player = state.players[playerId];
-        player.isDead      = false;
-        player.hasFolded   = false;
+        player.isDead        = false;
+        player.hasFolded     = false;
         player.cannotBeBaron = false;
-        player.antePaid    = anteAmount;
-        player.totalContribution = anteAmount;
-        player.hand        = [];
-        player.handResult  = undefined; // clear previous round result
+        player.isSittingOut  = false;
+        player.hand          = [];
+        player.handResult    = undefined;
 
-        // Deduct ante from balance and add to pot
-        player.balance -= anteAmount;
-        state.pot      += anteAmount;
+        if (player.balance < anteAmount) {
+            // Bankrupt — excluded from this hand
+            player.isSittingOut      = true;
+            player.isDead            = true;
+            player.antePaid          = 0;
+            player.totalContribution = 0;
+            continue;
+        }
+
+        player.antePaid          = anteAmount;
+        player.totalContribution = anteAmount;
+        player.balance          -= anteAmount;
+        state.pot               += anteAmount;
     }
     state.currentAnteToCall = anteAmount;
 
-    // Deal 3 cards to each player
-    for (const playerId of state.turnOrder) {
+    // Need at least 2 solvent players to run a hand
+    const payingPlayers = state.turnOrder.filter(id => !state.players[id].isSittingOut);
+    if (payingPlayers.length < 2) return false;
+
+    // Deal 3 cards only to players who are in the hand
+    for (const playerId of payingPlayers) {
         state.players[playerId].hand = state.drawPile.splice(0, 3);
     }
 
@@ -245,7 +258,7 @@ export async function startHand(channelId: string, anteAmount: number): Promise<
 
     state.phase = 'The Climb';
     state.currentTurnIndex = state.handLeaderIndex;
-    state.pot = anteAmount * state.turnOrder.length; // recalculate clean
+    state.pot = anteAmount * payingPlayers.length;
 
     while (
         state.players[state.turnOrder[state.currentTurnIndex]].isDead ||
