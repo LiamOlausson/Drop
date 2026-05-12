@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { GameBoard } from '../components/GameBoard';
 import { PlayerHand } from '../components/PlayerHand';
 import { ActionMenu } from '../components/ActionMenu';
+import { RulesPanel } from '../components/RulesPanel';
 import { Icon } from '../components/Icon';
 import type { DropGameState } from '../../game/types';
 
@@ -23,6 +24,7 @@ export const ActiveGameView: React.FC<ActiveGameViewProps> = ({ gameState, userI
     const [anteAmount, setAnteAmount] = useState<number>(gameState.baseAnte || 10);
     const getName = (id: string) => gameState.assignedNames?.[id] || playerNames[id] || id.substring(0, 10) + '…';
     const [isKickMenuOpen, setIsKickMenuOpen] = useState(false);
+    const [isRulesOpen, setIsRulesOpen] = useState(false);
     const [shaking, setShaking] = useState(false);
     const prevLog = useRef(gameState.lastActionLog);
 
@@ -38,6 +40,8 @@ export const ActiveGameView: React.FC<ActiveGameViewProps> = ({ gameState, userI
 
     // Entire layout is viewport-locked, no scrolling
     return (
+        <>
+        {isRulesOpen && <RulesPanel onClose={() => setIsRulesOpen(false)} />}
         <div style={{
             position: 'fixed', inset: 0,
             display: 'flex', flexDirection: 'column',
@@ -95,6 +99,17 @@ export const ActiveGameView: React.FC<ActiveGameViewProps> = ({ gameState, userI
                         </div>
                     )}
                 </div>
+                <button
+                    onClick={() => setIsRulesOpen(true)}
+                    style={{
+                        background: 'rgba(240,192,64,0.08)', border: '1px solid rgba(240,192,64,0.3)',
+                        color: 'rgba(240,192,64,0.7)', fontSize: 13, fontFamily: 'Cinzel, serif',
+                        width: 28, height: 28, borderRadius: '50%', cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        letterSpacing: 0, lineHeight: 1,
+                    }}
+                    title="Rules Reference"
+                >?</button>
             </div>
 
             {/* ── Main Content Area ── */}
@@ -443,6 +458,7 @@ export const ActiveGameView: React.FC<ActiveGameViewProps> = ({ gameState, userI
                 )}
             </div>
         </div>
+        </>
     );
 };
 

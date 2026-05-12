@@ -1,11 +1,22 @@
 // src/game/actions.ts
 import { getDropState, saveDropState } from './state';
-import { getShuffledDeck } from './deck';
+import { getShuffledDeck, shuffleDeck } from './deck';
 import type {CardRank, DropGameState, HandResult, PlayerState} from './types';
 
 // --------------------------------------------------------------
 // Helper functions
 // --------------------------------------------------------------
+
+/** Reshuffles the discard pile into the draw pile when cards run low.
+ *  Keeps the current top-of-discard in place so visible state doesn't jump. */
+function reshuffleDiscardIntoDraw(state: DropGameState): void {
+    if (state.discardPile.length <= 1) return;
+    const topDiscard = state.discardPile.pop()!;
+    const toShuffle = state.discardPile.map(c => ({ ...c, isRevealed: false }));
+    state.discardPile = [topDiscard];
+    shuffleDeck(toShuffle);
+    state.drawPile.push(...toShuffle);
+}
 
 
 /**
@@ -364,6 +375,7 @@ export async function performDive(
     const player = state.players[playerId];
     const validIds = discardIds.filter(id => player.hand.some(c => c.id === id));
     if (validIds.length !== 2) return false;
+    reshuffleDiscardIntoDraw(state);
     if (state.drawPile.length < 2) return false;
 
     const cost = state.currentAnteToCall;
@@ -549,6 +561,7 @@ export async function performSmuggle(
 
     const player    = state.players[playerId];
     const cardIndex = player.hand.findIndex(c => c.id === cardId);
+    reshuffleDiscardIntoDraw(state);
     if (cardIndex === -1 || state.drawPile.length === 0) return false;
 
     const actualCard = player.hand.splice(cardIndex, 1)[0];
@@ -639,6 +652,7 @@ async function resolveSmuggle(state: DropGameState, challengerId?: string) {
                 state.discardPile.push(...barons.map(c => ({ ...c, isRevealed: true })));
 
                 // Redraw to replace the discarded barons
+                reshuffleDiscardIntoDraw(state);
                 for (let i = 0; i < barons.length; i++) {
                     if (state.drawPile.length > 0) {
                         loser.hand.push(state.drawPile.shift()!);

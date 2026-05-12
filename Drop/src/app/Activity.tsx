@@ -11,7 +11,7 @@ import { DustParticles } from './components/DustParticles';
 export const Activity = () => {
     const { authenticated, discordSdk, status } = useDiscordSdk();
     // pull playerNames from useGameState
-    const { gameState, userId, playerNames, executeAction, isReady } = useGameState();
+    const { gameState, userId, playerNames, executeAction, actionError, isReady } = useGameState();
     const [channelName, setChannelName] = useState<string>();
     const [isAdminOpen, setIsAdminOpen] = useState(false);
 
@@ -63,6 +63,21 @@ export const Activity = () => {
             {(phase === 'The Climb' || phase === 'Battle') && <div className="phase-climb-glow" />}
 
             {isAdminOpen && <AdminView onClose={() => setIsAdminOpen(false)} />}
+
+            {/* Q-05: Action error toast */}
+            {actionError && (
+                <div style={{
+                    position: 'fixed', bottom: 36, left: '50%', transform: 'translateX(-50%)',
+                    background: 'rgba(100,18,18,0.95)', border: '1px solid rgba(192,57,43,0.7)',
+                    color: '#f5ead0', padding: '9px 20px', borderRadius: 8,
+                    fontFamily: 'Cinzel, serif', fontSize: 12, letterSpacing: 0.5,
+                    zIndex: 9000, animation: 'fadeUp 0.2s ease-out forwards',
+                    boxShadow: '0 4px 24px rgba(0,0,0,0.8), 0 0 16px rgba(139,26,26,0.4)',
+                    maxWidth: '80vw', textAlign: 'center', pointerEvents: 'none',
+                }}>
+                    ⚠ {actionError}
+                </div>
+            )}
 
             {!gameState ? (
                 // Pass the function to open the admin view

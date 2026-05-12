@@ -173,7 +173,7 @@ const Pile: React.FC<{
     }}>
         <span style={{
             fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 2,
-            color: fallen ? 'rgba(139,26,26,0.75)' : 'rgba(240,192,64,0.5)',
+            color: 'rgba(240,192,64,0.5)',
             textTransform: 'uppercase',
             textShadow: fallen ? '0 0 8px rgba(139,26,26,0.4)' : undefined,
         }}>{label}</span>
