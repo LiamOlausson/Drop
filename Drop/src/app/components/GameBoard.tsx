@@ -16,12 +16,17 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
 
     const [sumpPulsing, setSumpPulsing] = useState(false);
     const [fallenSmoke, setFallenSmoke] = useState(false);
-    const prevLog = useRef(gameState.lastActionLog);
+    const logKey = (l?: typeof gameState.lastActionLog) => l ? `${l.subjectId}::${l.text}` : undefined;
+    const prevLogKey = useRef(logKey(gameState.lastActionLog));
+
+    const [displayPot, setDisplayPot] = useState(gameState.pot);
+    const displayPotRef = useRef(gameState.pot);
 
     useEffect(() => {
         const log = gameState.lastActionLog;
-        if (!log || log === prevLog.current) return;
-        prevLog.current = log;
+        const key = logKey(log);
+        if (!log || key === prevLogKey.current) return;
+        prevLogKey.current = key;
 
         if (log.text.includes('Ante') || log.text.includes('Climbed') || log.text.includes('Ascended') || log.text.includes('Dove')) {
             setSumpPulsing(true);
@@ -32,6 +37,22 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
             setTimeout(() => setFallenSmoke(false), 900);
         }
     }, [gameState.lastActionLog]);
+
+    useEffect(() => {
+        const target = gameState.pot;
+        const start = displayPotRef.current;
+        if (start === target) return;
+        const startTime = performance.now();
+        const animate = (now: number) => {
+            const t = Math.min((now - startTime) / 400, 1);
+            const eased = 1 - Math.pow(1 - t, 3);
+            const current = Math.round(start + (target - start) * eased);
+            displayPotRef.current = current;
+            setDisplayPot(current);
+            if (t < 1) requestAnimationFrame(animate);
+        };
+        requestAnimationFrame(animate);
+    }, [gameState.pot]);
 
     const phaseLabel: Record<string, string> = {
         'Setup':            '— Waiting for players —',
@@ -107,7 +128,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
                         fontFamily: 'Cinzel, serif', fontWeight: 700,
                         fontSize: 22, color: '#f0c040',
                         textShadow: '0 0 10px rgba(240,192,64,0.4)',
-                    }}>{gameState.pot}</span>
+                    }}>{displayPot}</span>
                     <span style={{
                         fontFamily: 'Cinzel, serif', fontSize: 11,
                         color: 'rgba(240,192,64,0.5)', letterSpacing: 2,
@@ -123,7 +144,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState }) => {
             }}>
                 <Pile label="Discard" count={gameState.discardPile.length} card={topDiscard} />
                 <Pile label="Draw" count={gameState.drawPile.length} hidden />
-                <Pile label="Fallen" count={gameState.fallenPile.length} card={topFallen} hidden smoke={fallenSmoke} />
+                <Pile label="Fallen" count={gameState.fallenPile.length} card={topFallen} hidden smoke={fallenSmoke} fallen />
             </div>
 
             {/* Footer info bar */}
@@ -147,20 +168,35 @@ const Pile: React.FC<{
     card?: any;
     hidden?: boolean;
     smoke?: boolean;
-}> = ({ label, count, card, hidden, smoke }) => (
+    fallen?: boolean;
+}> = ({ label, count, card, hidden, smoke, fallen }) => (
     <div style={{
         display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
     }}>
-    <span style={{
-        fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 2,
-        color: 'rgba(240,192,64,0.5)', textTransform: 'uppercase',
-    }}>{label}</span>
+        <span style={{
+            fontFamily: 'Cinzel, serif', fontSize: 10, letterSpacing: 2,
+            color: 'rgba(240,192,64,0.5)',
+            textTransform: 'uppercase',
+            textShadow: fallen ? '0 0 8px rgba(139,26,26,0.4)' : undefined,
+        }}>{label}</span>
 
-        <div style={{ position: 'relative' }}>
+        <div style={{
+            position: 'relative',
+            filter: fallen ? 'drop-shadow(0 0 6px rgba(100,20,10,0.5))' : undefined,
+        }}>
             {(card || hidden) && count > 0 ? (
                 <Card card={card} hidden={hidden} size="md" />
             ) : (
-                <EmptyPile />
+                <EmptyPile fallen={fallen} />
+            )}
+            {/* Permanent seethe atmosphere for fallen pile */}
+            {fallen && count > 0 && (
+                <div style={{
+                    position: 'absolute', inset: 0, borderRadius: 8,
+                    pointerEvents: 'none', zIndex: 3,
+                    background: 'radial-gradient(ellipse 85% 80% at 50% 65%, rgba(40,8,4,0.65) 0%, transparent 70%)',
+                    animation: 'fallen-seethe 3.5s ease-in-out infinite',
+                }} />
             )}
             {/* Smuggle smoke effect on Fallen pile */}
             {smoke && (
@@ -180,13 +216,13 @@ const Pile: React.FC<{
     </div>
 );
 
-const EmptyPile = () => (
+const EmptyPile: React.FC<{ fallen?: boolean }> = ({ fallen }) => (
     <div style={{
         width: 88, height: 128,
-        border: '2px dashed rgba(201,173,135,0.2)',
+        border: `2px dashed ${fallen ? 'rgba(139,26,26,0.25)' : 'rgba(201,173,135,0.2)'}`,
         borderRadius: 8,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
     }}>
-        <span style={{ fontFamily: 'serif', fontSize: 20, color: 'rgba(201,173,135,0.15)' }}>∅</span>
+        <span style={{ fontFamily: 'serif', fontSize: 20, color: fallen ? 'rgba(139,26,26,0.18)' : 'rgba(201,173,135,0.15)' }}>∅</span>
     </div>
 );

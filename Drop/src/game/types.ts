@@ -32,6 +32,7 @@ export interface PlayerState {
     isDead: boolean; // True if eliminated via Hollow consequence or Opposing Barons Clause
     hasFolded: boolean; // True if they went to the bridge (folded) during an Ascend action
     cannotBeBaron?: boolean; // True if Glow Worm consequence prevents them from winning the pot
+    isSittingOut?: boolean; // True if player could not afford the ante and is excluded from this hand
     handResult?: 'Baron' | 'Survivor' | 'Dead'; // Result of the completed hand
 }
 

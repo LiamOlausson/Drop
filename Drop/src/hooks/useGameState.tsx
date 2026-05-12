@@ -1,5 +1,5 @@
 // src/hooks/useGameState.tsx
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useDiscordSdk } from './useDiscordSdk';
 import { useSyncState } from '@robojs/sync';
 import type { DropGameState, ActionType } from '../game/types';
@@ -11,6 +11,8 @@ export function useGameState() {
 
     const [gameState, setGameState]     = useState<DropGameState | null>(null);
     const [playerNames, setPlayerNames] = useState<Record<string, string>>({});
+    const [actionError, setActionError] = useState<string | null>(null);
+    const errorTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const [syncTick, setSyncTick] = useSyncState<number>(0, ['drop-game-sync', channelId]);
 
@@ -48,10 +50,23 @@ export function useGameState() {
             if (response.ok) {
                 setSyncTick(Date.now());
             } else {
-                console.warn(`Action ${action} rejected by server.`);
+                const text = await response.text().catch(() => '');
+                let message = 'Action rejected by the table.';
+                try {
+                    const json = JSON.parse(text);
+                    message = json.error || json.message || message;
+                } catch {
+                    if (text.trim()) message = text.trim();
+                }
+                if (errorTimer.current) clearTimeout(errorTimer.current);
+                setActionError(message);
+                errorTimer.current = setTimeout(() => setActionError(null), 3000);
             }
         } catch (error) {
             console.error(`Failed to execute action ${action}:`, error);
+            if (errorTimer.current) clearTimeout(errorTimer.current);
+            setActionError('Connection error — please try again.');
+            errorTimer.current = setTimeout(() => setActionError(null), 3000);
         }
     }, [channelId, userId, setSyncTick]);
 
@@ -60,6 +75,7 @@ export function useGameState() {
         userId,
         playerNames,
         executeAction,
+        actionError,
         isReady: authenticated && channelId != null
     };
 }

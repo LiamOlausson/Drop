@@ -11,6 +11,7 @@ interface PlayerHandProps {
     displayName?: string;
     compact?: boolean;
     lastActionLog?: { subjectId: string; text: string; targetId?: string };
+    dealIndex?: number;
 }
 
 const RESULT_CONFIG: Record<string, { icon: IconName; label: string; bg: string; color: string }> = {
@@ -19,9 +20,7 @@ const RESULT_CONFIG: Record<string, { icon: IconName; label: string; bg: string;
     Dead:     { icon: 'obelisk', label: 'Dead',     bg: '#1a1410', color: '#6b5e5e' },
 };
 
-export const PlayerHand: React.FC<PlayerHandProps> = ({
-                                                          player, isCurrentPlayer, isActiveTurn, displayName, compact = false, lastActionLog
-                                                      }) => {
+export const PlayerHand: React.FC<PlayerHandProps> = ({player, isCurrentPlayer, isActiveTurn, displayName, compact = false, lastActionLog, dealIndex = 0}) => {
     const result = player.handResult ? RESULT_CONFIG[player.handResult] : null;
     const isOut  = player.isDead || player.hasFolded;
     const name   = displayName || player.id.substring(0, 12);
@@ -31,6 +30,19 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
 
     const [slashed, setSlashed] = useState(false);
     const prevLog = useRef(lastActionLog);
+    const prevHandLen = useRef(player.hand.length);
+    const [isDealPlaying, setIsDealPlaying] = useState(false);
+
+    useEffect(() => {
+        const prev = prevHandLen.current;
+        prevHandLen.current = player.hand.length;
+        if (prev === 0 && player.hand.length > 0) {
+            setIsDealPlaying(true);
+            const lastCardDelay = dealIndex * 120 + (player.hand.length - 1) * 180;
+            const t = setTimeout(() => setIsDealPlaying(false), lastCardDelay + 420);
+            return () => clearTimeout(t);
+        }
+    }, [player.hand.length, dealIndex]);
 
     useEffect(() => {
         if (!lastActionLog || lastActionLog === prevLog.current) return;
@@ -106,12 +118,13 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
 
                     {/* Cards — hidden face-down, small */}
                     <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                        {player.hand.map(card => (
+                        {player.hand.map((card, ci) => (
                             <Card
                                 key={card.id}
                                 card={card}
                                 hidden={!card.isRevealed}
                                 size="sm"
+                                style={isDealPlaying ? { animation: `cardDeal 0.4s ease-out ${dealIndex * 120 + ci * 180}ms both` } : undefined}
                             />
                         ))}
                         {player.hand.length === 0 && (
@@ -226,12 +239,12 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
                     <div key={card.id} style={{
                         transform: isCurrentPlayer ? `translateY(-${i % 2 === 0 ? 4 : 0}px)` : 'none',
                         transition: 'transform 0.2s ease',
-                        animationDelay: `${i * 0.08}s`,
                     }}>
                         <Card
                             card={card}
                             hidden={!isCurrentPlayer && !card.isRevealed}
                             size="md"
+                            style={isDealPlaying ? { animation: `cardDeal 0.4s ease-out ${dealIndex * 120 + i * 180}ms both` } : undefined}
                         />
                     </div>
                 ))}

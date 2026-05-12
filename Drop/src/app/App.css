@@ -304,3 +304,42 @@ select:focus, input:focus { border-color: var(--candle); }
 .action-tile-snitch::after    { background: radial-gradient(ellipse 85% 55% at 50% 100%, rgba(122,106,42,0.35)  0%, transparent 75%); }
 .action-tile-smuggle::after   { background: radial-gradient(ellipse 85% 55% at 50% 100%, rgba(106,74,140,0.35)  0%, transparent 75%); }
 .action-tile-sabotage::after  { background: radial-gradient(ellipse 85% 55% at 50% 100%, rgba(140,106,42,0.35)  0%, transparent 75%); }
+
+/* ── Card rank tooltip (U-03) ── */
+@keyframes tooltipIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+.card-rank-tooltip {
+    pointer-events: none;
+    z-index: 9999;
+    max-width: 210px;
+    background: linear-gradient(160deg, rgba(22,16,10,0.98) 0%, rgba(14,10,6,0.98) 100%);
+    border: 1px solid rgba(240,192,64,0.3);
+    border-radius: 8px;
+    padding: 10px 12px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.8), 0 2px 8px rgba(0,0,0,0.6);
+    animation: tooltipIn 0.15s ease-out forwards;
+}
+
+/* ── A-04: Fallen pile atmosphere ── */
+@keyframes fallen-seethe {
+    0%, 100% { opacity: 0.45; }
+    50%       { opacity: 0.8; }
+}
+
+/* ── A-05: Baron victory splash ── */
+@keyframes baron-crown-in {
+    0%   { transform: scale(0.15) rotate(-18deg); opacity: 0; }
+    55%  { transform: scale(1.22) rotate(7deg);   opacity: 1; }
+    75%  { transform: scale(0.93) rotate(-2deg); }
+    100% { transform: scale(1)    rotate(0deg);   opacity: 1; }
+}
+@keyframes baron-text-in {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes baron-splash-out {
+    0%, 60% { opacity: 1; }
+    100%    { opacity: 0; }
+}

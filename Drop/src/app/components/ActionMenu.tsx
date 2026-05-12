@@ -21,6 +21,22 @@ const ACTIONS: Array<{ id: ActionType; label: string; desc: string; color: strin
     { id: 'Sabotage', label: 'Sabotage', desc: "Choose an opponent's card to cast to the Fallen pile.", color: '#8c6a2a', icon: 'dagger', cls: 'action-tile-sabotage' },
 ];
 
+const DECREE_DESCRIPTIONS: Record<string, string> = {
+    Baron:       'If unchallenged: target announces all card ranks in their hand.',
+    Warden:      'If unchallenged: target with a revealed card declares if their score is ≥ 20.',
+    Citizen:     'If unchallenged: take any Discard card, then drop one from your hand.',
+    'Glow Worm': 'If unchallenged: target with a revealed card pays another ante into the Sump.',
+    Hollow:      'If unchallenged: target discards their highest rank card.',
+};
+
+const CARD_CHALLENGE_NOTE: Record<string, string> = {
+    Baron:       'Challenge Consequence: loser must match the current value of the pot',
+    Warden:      'Challenge Consequence: loser must discard any barons in their hand',
+    Citizen:     'Challenge Consequence: loser payers ante directly to the winner',
+    'Glow Worm': 'Challenge Consequence: loser cannot become baron for this round',
+    Hollow:      'Challenge Consequence: loser is eliminated from this hand.',
+};
+
 export const ActionMenu: React.FC<ActionMenuProps> = ({ gameState, playerId, playerNames, onAction }) => {
     const [selectedAction, setSelectedAction] = useState<SubAction>(null);
     const [targetId, setTargetId]             = useState<string>('');
@@ -29,6 +45,7 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({ gameState, playerId, pla
     const [raiseAmount, setRaiseAmount]       = useState<number>(5);
     const [raiseInput, setRaiseInput]         = useState<string>('5');
     const [scavengeTarget, setScavengeTarget] = useState<string>('discard');
+    const [smuggleRank, setSmuggleRank]       = useState<string>('Baron');
 
     const isMyTurn = gameState.turnOrder[gameState.currentTurnIndex] === playerId;
     const player   = gameState.players[playerId];
@@ -45,6 +62,7 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({ gameState, playerId, pla
         setDiveCardIds([]);
         setRaiseAmount(5);
         setRaiseInput('5');
+        setSmuggleRank('Baron');
     };
 
     // sync raise helpers
@@ -499,17 +517,40 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({ gameState, playerId, pla
                             ))}
                         </select>
                     </Field>
+                    {selectedCardId && (() => {
+                        const picked = player.hand.find(c => c.id === selectedCardId);
+                        const note = picked ? CARD_CHALLENGE_NOTE[picked.rank] : null;
+                        return note ? (
+                            <p style={{
+                                fontFamily: 'Crimson Pro, serif', fontStyle: 'italic',
+                                fontSize: 12, color: 'rgba(201,173,135,0.55)',
+                                margin: 0, lineHeight: 1.5,
+                                borderLeft: '2px solid rgba(192,57,43,0.25)',
+                                paddingLeft: 8,
+                            }}>{note}</p>
+                        ) : null;
+                    })()}
                     <Field label="Declare rank as:">
-                        <select id="smuggle-rank" defaultValue="Baron">
+                        <select value={smuggleRank} onChange={e => setSmuggleRank(e.target.value)}>
                             {['Baron', 'Warden', 'Citizen', 'Glow Worm', 'Hollow'].map(r => (
                                 <option key={r} value={r}>{r}</option>
                             ))}
                         </select>
                     </Field>
+                    {DECREE_DESCRIPTIONS[smuggleRank] && (
+                        <p style={{
+                            fontFamily: 'Crimson Pro, serif', fontStyle: 'italic',
+                            fontSize: 12, color: 'rgba(201,173,135,0.55)',
+                            margin: 0, lineHeight: 1.5,
+                            borderLeft: '2px solid rgba(240,192,64,0.2)',
+                            paddingLeft: 8,
+                        }}>
+                            {DECREE_DESCRIPTIONS[smuggleRank]}
+                        </p>
+                    )}
                     <div style={rowStyle}>
                         <TavernBtn color="candle" disabled={!selectedCardId} onClick={() => {
-                            const rank = (document.getElementById('smuggle-rank') as HTMLSelectElement).value;
-                            onAction('Smuggle', { cardId: selectedCardId, declaredRank: rank }); back();
+                            onAction('Smuggle', { cardId: selectedCardId, declaredRank: smuggleRank }); back();
                         }}>Smuggle</TavernBtn>
                         <BackLink onClick={back} />
                     </div>
