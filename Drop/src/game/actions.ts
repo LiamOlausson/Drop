@@ -155,9 +155,10 @@ function evaluateJudgementSync(state: DropGameState): void {
     // Categorize players based on the secured scores
     const barons = baronCandidates.filter(s => s.score === highScore);
 
-    // A survivor only exists if there is a distinct difference between high and low score
+    // A survivor only exists if there is a distinct difference between high and low score.
+    // Players who were Snitched on this hand cannot claim the Survivor escape.
     const survivors = (highScore !== lowScore && scored.length > 1)
-        ? scored.filter(s => s.score === lowScore)
+        ? scored.filter(s => s.score === lowScore && !s.player.cannotBeSurvivor)
         : [];
 
     const middle = scored.filter(s => !barons.includes(s) && !survivors.includes(s));
@@ -232,12 +233,13 @@ export async function startHand(channelId: string, anteAmount: number): Promise<
     // Reset hand state for every player, then sit out anyone who can't afford the ante
     for (const playerId of state.turnOrder) {
         const player = state.players[playerId];
-        player.isDead        = false;
-        player.hasFolded     = false;
-        player.cannotBeBaron = false;
-        player.isSittingOut  = false;
-        player.hand          = [];
-        player.handResult    = undefined;
+        player.isDead            = false;
+        player.hasFolded         = false;
+        player.cannotBeBaron     = false;
+        player.cannotBeSurvivor  = false;
+        player.isSittingOut      = false;
+        player.hand              = [];
+        player.handResult        = undefined;
 
         if (player.balance < anteAmount) {
             // Bankrupt — excluded from this hand
@@ -504,6 +506,7 @@ export async function performSnitch(
         if (type === 'Low'  && card.value < chosen.value) chosen = card;
     }
     chosen.isRevealed = true;
+    target.cannotBeSurvivor = true;
 
     const judge = advanceTurn(state);
     if (judge) evaluateJudgementSync(state);

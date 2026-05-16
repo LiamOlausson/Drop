@@ -16,7 +16,7 @@ const ACTIONS: Array<{ id: ActionType; label: string; desc: string; color: strin
     { id: 'Scavenge', label: 'Scavenge', desc: 'Swap a card with the Discard or Fallen pile.',        color: '#6a8c4a', icon: 'swap',  cls: 'action-tile-scavenge' },
     { id: 'Dive',     label: 'Dive',     desc: 'Discard 2, pay ante, draw 2 from the deck.',          color: '#4a6a8c', icon: 'plunge',    cls: 'action-tile-dive'     },
     { id: 'Ascend',   label: 'Ascend',   desc: 'Raise the stakes. Others must call or fold.',         color: '#8c4a4a', icon: 'flame',   cls: 'action-tile-ascend'   },
-    { id: 'Snitch',   label: 'Snitch',   desc: 'Force a target to reveal their highest or lowest.',   color: '#cda716', icon: 'accuse',     cls: 'action-tile-snitch'   },
+    { id: 'Snitch',   label: 'Snitch',   desc: 'Expose a card and bar them from being the Survivor.', color: '#cda716', icon: 'accuse',     cls: 'action-tile-snitch'   },
     { id: 'Smuggle',  label: 'Smuggle',  desc: 'Drop a card face-down, declare its rank.',            color: '#6a4a8c', icon: 'shroud',    cls: 'action-tile-smuggle'  },
     { id: 'Sabotage', label: 'Sabotage', desc: "Choose an opponent's card to cast to the Fallen pile.", color: '#8c6a2a', icon: 'dagger', cls: 'action-tile-sabotage' },
 ];
@@ -478,7 +478,7 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({ gameState, playerId, pla
             {/* SNITCH */}
             {selectedAction === 'Snitch' && (
                 <div style={formStyle}>
-                    <p style={descStyle}>Force a player to reveal a card.</p>
+                    <p style={descStyle}>Force a player to reveal a card. The exposed player cannot become the Survivor this hand.</p>
                     <Field label="Target:">
                         <select value={targetId} onChange={e => setTargetId(e.target.value)}>
                             <option value="" disabled>Select target…</option>
