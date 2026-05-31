@@ -1,9 +1,7 @@
-// src/api/admin/players.ts
 import { RoboResponse } from '@robojs/server';
 import type { RoboRequest } from '@robojs/server';
 import { Flashcore } from 'robo.js';
 
-// You can set this in your .env file as ADMIN_PASSWORD=your_secure_password
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'superadmin';
 
 export default async (req: RoboRequest) => {

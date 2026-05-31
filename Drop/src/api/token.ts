@@ -31,7 +31,7 @@ export default async (req: RoboRequest) => {
 		})
 	})
 	const { access_token } = await response.json()
-	logger.debug('Access token exchanged', response.ok ? 'successfully ✅' : 'unsuccessfully ❌')
+	logger.debug('Access token exchanged', response.ok ? 'successful' : 'unsuccessful')
 
 	return RoboResponse.json(
 		{ access_token },

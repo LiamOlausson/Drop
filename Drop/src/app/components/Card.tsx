@@ -120,7 +120,7 @@ export const Card: React.FC<CardProps> = ({ card, hidden, size = 'md', style }) 
     const cfg = RANK_CONFIG[card.rank] ?? RANK_CONFIG['Hollow'];
     const tip = RANK_TOOLTIPS[card.rank];
 
-    /* ── Card Face ── */
+    /* Card Face */
     return (
         <>
             <div

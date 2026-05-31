@@ -1,4 +1,3 @@
-// src/app/views/AdminView.tsx
 import React, { useState } from 'react';
 
 interface AdminViewProps {

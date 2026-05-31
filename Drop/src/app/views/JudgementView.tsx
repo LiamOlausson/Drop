@@ -1,4 +1,3 @@
-// src/app/views/JudgementView.tsx
 import React, { useState, useEffect, useMemo } from 'react';
 import { Card } from '../components/Card';
 import { Icon, type IconName } from '../components/Icon';
@@ -65,7 +64,7 @@ export const JudgementView: React.FC<JudgementViewProps> = ({ gameState, userId,
     const brokeIds   = gameState.turnOrder.filter(id => gameState.players[id].balance < anteAmount);
     const canStart   = gameState.turnOrder.length - brokeIds.length >= 2;
 
-    // U-10: sequential reveal
+    // sequential reveal
     const activePlayerIds = gameState.turnOrder.filter(id => !gameState.players[id].isSittingOut);
     const totalCards = activePlayerIds.length * 3;
     const [revealedCount, setRevealedCount] = useState(0);
@@ -83,7 +82,7 @@ export const JudgementView: React.FC<JudgementViewProps> = ({ gameState, userId,
     const isPlayerFullyRevealed = (activeIndex: number) =>
         activeIndex < 0 || revealedCount >= (activeIndex + 1) * 3;
 
-    // U-05: balance delta lookup
+    // balance delta lookup
     const handResultMap = Object.fromEntries(
         (gameState.handResults ?? []).map(r => [r.playerId, r])
     );

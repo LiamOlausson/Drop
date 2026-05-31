@@ -259,7 +259,7 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({ gameState, playerId, pla
             );
         }
 
-        // Fallback for decrees we haven't built yet
+        // Fallback for undefined decrees
         return <Scroll><WaitMsg>The {dec.decreeType} Decree is being written…</WaitMsg></Scroll>;
     }
 
@@ -363,7 +363,7 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({ gameState, playerId, pla
     return (
         <Scroll title={selectedAction}>
 
-            {/* SCAVENGE */}
+            {/* Scavenge */}
             {selectedAction === 'Scavenge' && (
                 <div style={formStyle}>
                     <Field label="Card to discard:">
@@ -420,7 +420,7 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({ gameState, playerId, pla
                 </div>
             )}
 
-            {/* DIVE */}
+            {/* Dive */}
             {selectedAction === 'Dive' && (
                 <div style={formStyle}>
                     <p style={descStyle}>Select exactly 2 cards to discard.</p>
@@ -475,7 +475,7 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({ gameState, playerId, pla
                 </div>
             )}
 
-            {/* SNITCH */}
+            {/* Snitch */}
             {selectedAction === 'Snitch' && (
                 <div style={formStyle}>
                     <p style={descStyle}>Force a player to reveal a card. The exposed player cannot become the Survivor this hand.</p>
@@ -503,7 +503,7 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({ gameState, playerId, pla
                 </div>
             )}
 
-            {/* SMUGGLE */}
+            {/* Smuggle */}
             {selectedAction === 'Smuggle' && (
                 <div style={formStyle}>
                     <p style={descStyle}>Drop a card face-down — truthfully or not.</p>
@@ -557,7 +557,7 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({ gameState, playerId, pla
                 </div>
             )}
 
-            {/* SABOTAGE */}
+            {/* Sabotage */}
             {selectedAction === 'Sabotage' && (
                 <div style={formStyle}>
                     <p style={descStyle}>Cast an opponent's card to the Fallen pile. Reveal one of yours.</p>
@@ -600,7 +600,7 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({ gameState, playerId, pla
     );
 };
 
-/* ── Primitives ── */
+/* Primitives */
 
 const Scroll: React.FC<{ children: React.ReactNode; title?: string }> = ({ children, title }) => (
     <div style={{

@@ -1,4 +1,3 @@
-// src/app/components/RulesPanel.tsx
 import React from 'react';
 import { Icon, type IconName } from './Icon';
 
@@ -67,7 +66,7 @@ export const RulesPanel: React.FC<RulesPanelProps> = ({ onClose }) => (
 
             <div style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-                {/* ── Judgement Scoring ── */}
+                {/* Judgement Scoring */}
                 <Section title="Judgement Scoring">
                     <p style={bodyStyle}>At the end of each hand, players are sorted by their total hand score.</p>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 8 }}>
@@ -87,7 +86,7 @@ export const RulesPanel: React.FC<RulesPanelProps> = ({ onClose }) => (
                     </div>
                 </Section>
 
-                {/* ── Actions ── */}
+                {/* Actions */}
                 <Section title="Actions">
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                         {ACTIONS_REF.map(a => (
@@ -103,7 +102,7 @@ export const RulesPanel: React.FC<RulesPanelProps> = ({ onClose }) => (
                     </div>
                 </Section>
 
-                {/* ── Card Ranks ── */}
+                {/* Card Ranks */}
                 <Section title="Card Ranks &amp; Smuggle Decrees">
                     <p style={bodyStyle}>If a Smuggle goes unchallenged, the Smuggler issues the Decree matching their declared rank. If challenged and caught bluffing, the consequence below falls on the loser.</p>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 8 }}>

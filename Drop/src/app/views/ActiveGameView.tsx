@@ -1,4 +1,3 @@
-// src/app/views/ActiveGameView.tsx
 import React, { useEffect, useRef, useState } from 'react';
 import { GameBoard } from '../components/GameBoard';
 import { PlayerHand } from '../components/PlayerHand';
@@ -62,7 +61,7 @@ export const ActiveGameView: React.FC<ActiveGameViewProps> = ({ gameState, userI
                     ⚠ TABLE CLOSING AFTER CURRENT HAND ⚠
                 </div>
             )}
-            {/* ── Top Header Bar ── */}
+            {/* Top Header Bar */}
             <div style={{
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                 padding: '8px 20px',
@@ -114,13 +113,13 @@ export const ActiveGameView: React.FC<ActiveGameViewProps> = ({ gameState, userI
                 >?</button>
             </div>
 
-            {/* ── Main Content Area ── */}
+            {/* Main Content Area */}
             <div style={{
                 flex: 1, display: 'flex', overflow: 'hidden',
                 animation: shaking ? 'shake 0.4s ease' : undefined,
             }}>
 
-                {/* ── Setup Phase ── */}
+                {/* Setup Phase */}
                 {isSetup && (
                     <div style={{
                         flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -238,7 +237,7 @@ export const ActiveGameView: React.FC<ActiveGameViewProps> = ({ gameState, userI
                     </div>
                 )}
 
-                {/* ── Active Game Layout ── */}
+                {/* Active Game Layout */}
                 {!isSetup && (
                     <>
                         {/* Left panel = Whispers Log */}

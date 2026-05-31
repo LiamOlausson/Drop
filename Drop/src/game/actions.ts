@@ -1,12 +1,8 @@
-// src/game/actions.ts
 import { getDropState, saveDropState } from './state';
 import { getShuffledDeck, shuffleDeck } from './deck';
 import type {CardRank, DropGameState, HandResult, PlayerState} from './types';
 
-// --------------------------------------------------------------
 // Helper functions
-// --------------------------------------------------------------
-
 /** Reshuffles the discard pile into the draw pile when cards run low.
  *  Keeps the current top-of-discard in place so visible state doesn't jump. */
 function reshuffleDiscardIntoDraw(state: DropGameState): void {
@@ -203,10 +199,7 @@ function evaluateJudgementSync(state: DropGameState): void {
     state.handResults = results;
 }
 
-// ---------------------------------------------------------------------------
 // Setup functions
-// ---------------------------------------------------------------------------
-
 export async function startHand(channelId: string, anteAmount: number): Promise<boolean> {
     const state = await getDropState(channelId);
     if (!state) return false;
@@ -291,9 +284,7 @@ export async function startHand(channelId: string, anteAmount: number): Promise<
     return true;
 }
 
-// ---------------------------------------------------------------------------
 // ACTIONS
-// ---------------------------------------------------------------------------
 
 export async function performScavenge(
     channelId: string, playerId: string,

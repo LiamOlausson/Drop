@@ -282,7 +282,7 @@ select:focus, input:focus { border-color: var(--candle); }
     100% { transform: translate(-50%, -50%) rotate(360deg); }
 }
 
-/* ── Action tile idle glows ── */
+/* Action tile idle glows */
 .action-tile { position: relative; overflow: hidden; }
 
 .action-tile-scavenge::after,
@@ -305,7 +305,7 @@ select:focus, input:focus { border-color: var(--candle); }
 .action-tile-smuggle::after   { background: radial-gradient(ellipse 85% 55% at 50% 100%, rgba(106,74,140,0.35)  0%, transparent 75%); }
 .action-tile-sabotage::after  { background: radial-gradient(ellipse 85% 55% at 50% 100%, rgba(140,106,42,0.35)  0%, transparent 75%); }
 
-/* ── Card rank tooltip (U-03) ── */
+/* Card rank tooltip */
 @keyframes tooltipIn {
     from { opacity: 0; }
     to   { opacity: 1; }
@@ -322,13 +322,13 @@ select:focus, input:focus { border-color: var(--candle); }
     animation: tooltipIn 0.15s ease-out forwards;
 }
 
-/* ── A-04: Fallen pile atmosphere ── */
+/* Fallen pile atmosphere */
 @keyframes fallen-seethe {
     0%, 100% { opacity: 0.45; }
     50%       { opacity: 0.8; }
 }
 
-/* ── A-05: Baron victory splash ── */
+/* Baron victory splash */
 @keyframes baron-crown-in {
     0%   { transform: scale(0.15) rotate(-18deg); opacity: 0; }
     55%  { transform: scale(1.22) rotate(7deg);   opacity: 1; }
