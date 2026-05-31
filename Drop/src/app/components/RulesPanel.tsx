@@ -1,4 +1,3 @@
-// src/app/components/RulesPanel.tsx
 import React from 'react';
 import { Icon, type IconName } from './Icon';
 
@@ -10,7 +9,7 @@ const ACTIONS_REF: Array<{ label: string; icon: IconName; color: string; what: s
     { label: 'Scavenge', icon: 'swap',   color: '#6a8c4a', what: 'Swap a card in your hand with the top of the Discard or Fallen pile, or a revealed card from an opponent\'s hand.', note: 'Your new card is revealed; the card you give away goes face-down.' },
     { label: 'Dive',     icon: 'plunge', color: '#4a6a8c', what: 'Discard 2 cards from your hand and pay the current ante. Draw 2 fresh cards from the deck.', note: 'Your first drawn card is revealed unless you already have a revealed card.' },
     { label: 'Ascend',   icon: 'flame',  color: '#8c4a4a', what: 'Raise the stakes by any amount. All other active players must Call (match the raise) or Fold (go to the Bridge, eliminated).', note: 'Folded players keep their ante but lose their hand.' },
-    { label: 'Snitch',   icon: 'accuse', color: '#cda716', what: 'Force a target player to reveal either their highest or their lowest card to the table.', note: 'Once revealed, that card stays face-up for all to see.' },
+    { label: 'Snitch',   icon: 'accuse', color: '#cda716', what: 'Force a target player to reveal either their highest or their lowest card to the table.', note: 'Once revealed, that card stays face-up for all to see. The exposed player cannot become the Survivor this hand.' },
     { label: 'Smuggle',  icon: 'shroud', color: '#6a4a8c', what: 'Drop a card from your hand face-down into the Fallen pile and declare its rank (truthfully or not). Other players may Challenge or Pass.', note: 'If unchallenged, you gain the Decree power of your declared rank. If caught bluffing, you face the bluff consequence.' },
     { label: 'Sabotage', icon: 'dagger', color: '#8c6a2a', what: "Choose one of an opponent's cards (by position) to cast to the Fallen pile. They immediately draw a replacement.", note: 'You must also reveal one of your own cards as the cost.' },
 ];
@@ -67,7 +66,7 @@ export const RulesPanel: React.FC<RulesPanelProps> = ({ onClose }) => (
 
             <div style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-                {/* ── Judgement Scoring ── */}
+                {/* Judgement Scoring */}
                 <Section title="Judgement Scoring">
                     <p style={bodyStyle}>At the end of each hand, players are sorted by their total hand score.</p>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 8 }}>
@@ -87,7 +86,7 @@ export const RulesPanel: React.FC<RulesPanelProps> = ({ onClose }) => (
                     </div>
                 </Section>
 
-                {/* ── Actions ── */}
+                {/* Actions */}
                 <Section title="Actions">
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                         {ACTIONS_REF.map(a => (
@@ -103,7 +102,7 @@ export const RulesPanel: React.FC<RulesPanelProps> = ({ onClose }) => (
                     </div>
                 </Section>
 
-                {/* ── Card Ranks ── */}
+                {/* Card Ranks */}
                 <Section title="Card Ranks &amp; Smuggle Decrees">
                     <p style={bodyStyle}>If a Smuggle goes unchallenged, the Smuggler issues the Decree matching their declared rank. If challenged and caught bluffing, the consequence below falls on the loser.</p>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 8 }}>

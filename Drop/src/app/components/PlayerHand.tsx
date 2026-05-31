@@ -1,4 +1,3 @@
-// src/app/components/PlayerHand.tsx
 import React, { useEffect, useRef, useState } from 'react';
 import { Card } from './Card';
 import { Icon, type IconName } from './Icon';

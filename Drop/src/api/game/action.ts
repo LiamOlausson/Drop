@@ -1,4 +1,3 @@
-// src/api/game/action.ts
 import { RoboResponse } from '@robojs/server';
 import type { RoboRequest } from '@robojs/server';
 import { initializeGame, joinGame, destroyGame, getDropState } from '../../game/state.js';

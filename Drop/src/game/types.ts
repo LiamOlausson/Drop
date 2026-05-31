@@ -31,7 +31,8 @@ export interface PlayerState {
     balance: number;  // Running coin balance for this lobby session
     isDead: boolean; // True if eliminated via Hollow consequence or Opposing Barons Clause
     hasFolded: boolean; // True if they went to the bridge (folded) during an Ascend action
-    cannotBeBaron?: boolean; // True if Glow Worm consequence prevents them from winning the pot
+    cannotBeBaron?: boolean;    // True if Glow Worm consequence prevents them from winning the pot
+    cannotBeSurvivor?: boolean; // True if Snitched on this hand — exposed players cannot claim the lowest-hand escape
     isSittingOut?: boolean; // True if player could not afford the ante and is excluded from this hand
     handResult?: 'Baron' | 'Survivor' | 'Dead'; // Result of the completed hand
 }
