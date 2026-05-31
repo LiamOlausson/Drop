@@ -27,6 +27,7 @@ export const ActiveGameView: React.FC<ActiveGameViewProps> = ({ gameState, userI
     const [shaking, setShaking] = useState(false);
     const logKey = (l?: typeof gameState.lastActionLog) => l ? `${l.subjectId}::${l.text}` : undefined;
     const prevLogKey = useRef(logKey(gameState.lastActionLog));
+    const logScrollRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         const log = gameState.lastActionLog;
@@ -38,6 +39,12 @@ export const ActiveGameView: React.FC<ActiveGameViewProps> = ({ gameState, userI
             setTimeout(() => setShaking(false), 450);
         }
     }, [gameState.lastActionLog]);
+
+    useEffect(() => {
+        if (logScrollRef.current) {
+            logScrollRef.current.scrollTop = logScrollRef.current.scrollHeight;
+        }
+    }, [gameState.actionLog?.length]);
 
     // Entire layout is viewport-locked, no scrolling
     return (
@@ -240,7 +247,7 @@ export const ActiveGameView: React.FC<ActiveGameViewProps> = ({ gameState, userI
                 {/* Active Game Layout */}
                 {!isSetup && (
                     <>
-                        {/* Left panel = Whispers Log */}
+                        {/* Left panel = Round Log */}
                         <div style={{
                             width: 200,
                             borderRight: '1px solid rgba(60,46,30,0.6)',
@@ -249,34 +256,6 @@ export const ActiveGameView: React.FC<ActiveGameViewProps> = ({ gameState, userI
                             overflow: 'hidden',
                             flexShrink: 0,
                         }}>
-                            {/* Last Action Box */}
-                            <div style={{
-                                padding: '12px',
-                                borderBottom: '1px solid rgba(60,46,30,0.5)',
-                                background: 'rgba(26,20,16,0.6)',
-                                flexShrink: 0,
-                                display: 'flex', flexDirection: 'column', gap: 4
-                            }}>
-                                <span style={{
-                                    fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 3,
-                                    color: 'rgba(240,192,64,0.4)', textTransform: 'uppercase',
-                                }}>Last Action</span>
-
-                                {gameState.lastActionLog ? (
-                                    <div style={{ fontFamily: 'Crimson Pro, serif', fontSize: 14, color: 'rgba(201,173,135,0.8)', lineHeight: 1.3 }}>
-                                        <strong style={{ color: '#f0c040' }}>{getName(gameState.lastActionLog.subjectId)}</strong>
-                                        <br />
-                                        <span style={{ fontStyle: 'italic', color: 'rgba(201,173,135,0.6)', fontSize: 13 }}>
-                                            {gameState.lastActionLog.text}
-                                        </span>
-                                    </div>
-                                ) : (
-                                    <span style={{ fontFamily: 'Crimson Pro, serif', fontStyle: 'italic', fontSize: 13, color: 'rgba(201,173,135,0.3)' }}>
-                                        The table is waiting...
-                                    </span>
-                                )}
-                            </div>
-                            {/* Whispers Header */}
                             <div style={{
                                 padding: '10px 12px 8px',
                                 borderBottom: '1px solid rgba(60,46,30,0.5)',
@@ -285,21 +264,32 @@ export const ActiveGameView: React.FC<ActiveGameViewProps> = ({ gameState, userI
                                 <span style={{
                                     fontFamily: 'Cinzel, serif', fontSize: 9, letterSpacing: 3,
                                     color: 'rgba(240,192,64,0.4)', textTransform: 'uppercase',
-                                }}>Whispers</span>
+                                }}>Round Log</span>
                             </div>
-                            <div style={{
+                            <div ref={logScrollRef} style={{
                                 flex: 1, overflowY: 'auto', padding: '10px 12px',
                                 display: 'flex', flexDirection: 'column', gap: 8,
                             }}>
-                                {gameState.whispers && gameState.whispers.length > 0 ? (
-                                    gameState.whispers.map((w, i) => (
-                                        <span key={i} style={{ fontFamily: 'Crimson Pro, serif', fontStyle: 'italic', fontSize: 13, color: 'rgba(201,173,135,0.8)', lineHeight: 1.3 }}>
-                                            <Icon name="eye" size={13} /> <strong style={{ color: '#f0c040' }}>{getName(w.subjectId)}</strong> {w.text}
-                                        </span>
+                                {gameState.actionLog && gameState.actionLog.length > 0 ? (
+                                    gameState.actionLog.map((entry, i) => (
+                                        <div key={i} style={{ lineHeight: 1.35 }}>
+                                            {entry.type === 'whisper' ? (
+                                                <span style={{ fontFamily: 'Crimson Pro, serif', fontStyle: 'italic', fontSize: 12, color: 'rgba(201,173,135,0.75)' }}>
+                                                    <Icon name="eye" size={11} />{' '}
+                                                    <strong style={{ color: '#c9a84c', fontStyle: 'normal' }}>{getName(entry.subjectId)}</strong>{' '}
+                                                    {entry.text}
+                                                </span>
+                                            ) : (
+                                                <span style={{ fontFamily: 'Crimson Pro, serif', fontSize: 13, color: 'rgba(201,173,135,0.85)' }}>
+                                                    <strong style={{ color: '#f0c040' }}>{getName(entry.subjectId)}</strong>{' '}
+                                                    <span style={{ fontStyle: 'italic', color: 'rgba(201,173,135,0.6)', fontSize: 12 }}>{entry.text}</span>
+                                                </span>
+                                            )}
+                                        </div>
                                     ))
                                 ) : (
                                     <span style={{ fontFamily: 'Crimson Pro, serif', fontStyle: 'italic', fontSize: 13, color: 'rgba(201,173,135,0.3)', textAlign: 'center', marginTop: 10 }}>
-                                        The Sump is quiet…
+                                        The table is waiting…
                                     </span>
                                 )}
                             </div>

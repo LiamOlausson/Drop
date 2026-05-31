@@ -19,7 +19,7 @@ const RANKS_REF: Array<{ rank: string; color: string; pts: string; decree: strin
     { rank: 'Warden',    color: '#c0932b', pts: '7–10 pts', decree: 'Target with a revealed card declares if their score is ≥ 20.',             bluff: 'Challenge loser discards all their Baron cards and redraws.' },
     { rank: 'Citizen',   color: '#4a7a4a', pts: '4–6 pts',  decree: 'Take any card from the Discard pile, then drop one from your hand.',       bluff: 'Challenge loser pays the ante directly to the winner.' },
     { rank: 'Glow Worm', color: '#5a8a9a', pts: '2–3 pts',  decree: 'Target with a revealed card pays another ante into the Sump.',             bluff: 'Challenge loser cannot claim the pot this hand.' },
-    { rank: 'Hollow',    color: '#6b5e8d', pts: '1 pt',     decree: 'Target discards their highest rank card.',                                 bluff: 'Challenge loser of the challenge is eliminated from this hand.' },
+    { rank: 'Hollow',    color: '#6b5e8d', pts: '1 pt',     decree: 'Target discards their highest revealed card. No effect if no revealed cards exist.',  bluff: 'Challenge loser of the challenge is eliminated from this hand.' },
 ];
 
 export const RulesPanel: React.FC<RulesPanelProps> = ({ onClose }) => (

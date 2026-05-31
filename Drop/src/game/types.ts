@@ -102,6 +102,14 @@ export interface Whisper {
     text: string;
 }
 
+/** A single entry in the round's game log — either a player action or a whisper (decree intel). */
+export interface LogEntry {
+    type: 'action' | 'whisper';
+    subjectId: string;
+    text: string;
+    targetId?: string;
+}
+
 /**
  * Pending State for a Decree Action
  * Occurs when a Smuggle goes unchallenged. The smuggler must now make a choice based on their declared rank.
@@ -149,6 +157,7 @@ export interface DropGameState {
     handResults?: HandResult[]; // Populated after Judgement; cleared at start of next hand
     pendingAscend?: AscendChallengeState;
     lastActionLog?: { subjectId: string; text: string; targetId?: string; };
+    actionLog: LogEntry[];
 
     // Smuggle Action
     pendingSmuggle?: SmuggleChallengeState;

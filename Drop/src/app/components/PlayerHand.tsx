@@ -118,13 +118,21 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({player, isCurrentPlayer, 
                     {/* Cards — hidden face-down, small */}
                     <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                         {player.hand.map((card, ci) => (
-                            <Card
-                                key={card.id}
-                                card={card}
-                                hidden={!card.isRevealed}
-                                size="sm"
-                                style={isDealPlaying ? { animation: `cardDeal 0.4s ease-out ${dealIndex * 120 + ci * 180}ms both` } : undefined}
-                            />
+                            <div key={card.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                                <Card
+                                    card={card}
+                                    hidden={!card.isRevealed}
+                                    size="sm"
+                                    style={isDealPlaying ? { animation: `cardDeal 0.4s ease-out ${dealIndex * 120 + ci * 180}ms both` } : undefined}
+                                />
+                                {!isCurrentPlayer && (
+                                    <span style={{
+                                        fontFamily: 'Cinzel, serif', fontSize: 8, fontWeight: 700,
+                                        color: 'rgba(240,192,64,0.55)', letterSpacing: 0.5,
+                                        lineHeight: 1,
+                                    }}>{ci + 1}</span>
+                                )}
+                            </div>
                         ))}
                         {player.hand.length === 0 && (
                             <span style={{ fontFamily: 'Crimson Pro, serif', fontStyle: 'italic', color: 'rgba(201,173,135,0.25)', fontSize: 11 }}>
