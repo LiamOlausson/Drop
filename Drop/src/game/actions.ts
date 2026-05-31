@@ -1,6 +1,6 @@
 import { getDropState, saveDropState } from './state';
 import { getShuffledDeck, shuffleDeck } from './deck';
-import type {CardRank, DropGameState, HandResult, PlayerState} from './types';
+import type {CardRank, DropGameState, HandResult, LogEntry, PlayerState} from './types';
 
 // Helper functions
 /** Reshuffles the discard pile into the draw pile when cards run low.
@@ -29,6 +29,21 @@ function getActivePlayers(state: DropGameState): string[] {
  */
 function getPlayerName(state: DropGameState, playerId: string): string {
     return state.assignedNames?.[playerId] || playerId.substring(0, 10) + '…';
+}
+
+function addActionLog(state: DropGameState, subjectId: string, text: string, targetId?: string) {
+    if (!state.actionLog) state.actionLog = [];
+    const entry: LogEntry = { type: 'action', subjectId, text };
+    if (targetId) entry.targetId = targetId;
+    state.actionLog.push(entry);
+    state.lastActionLog = { subjectId, text, ...(targetId ? { targetId } : {}) };
+}
+
+function addWhisperLog(state: DropGameState, subjectId: string, text: string) {
+    if (!state.actionLog) state.actionLog = [];
+    state.actionLog.push({ type: 'whisper', subjectId, text });
+    if (!state.whispers) state.whispers = [];
+    state.whispers.push({ subjectId, text });
 }
 
 /**
@@ -151,9 +166,12 @@ function evaluateJudgementSync(state: DropGameState): void {
     // Categorize players based on the secured scores
     const barons = baronCandidates.filter(s => s.score === highScore);
 
-    // A survivor only exists if there is a distinct difference between high and low score.
-    // Players who were Snitched on this hand cannot claim the Survivor escape.
-    const survivors = (highScore !== lowScore && scored.length > 1)
+    // A survivor only exists if there is a distinct difference between high and low score,
+    // AND the lowest active score beats every dead/folded player's score.
+    // Dead players compete for the survivor threshold — if any dead player scored equal
+    // or lower than the lowest active player, the escape is closed.
+    const survivorBlocked = results.some(r => r.score <= lowScore);
+    const survivors = (highScore !== lowScore && scored.length > 1 && !survivorBlocked)
         ? scored.filter(s => s.score === lowScore && !s.player.cannotBeSurvivor)
         : [];
 
@@ -278,6 +296,7 @@ export async function startHand(channelId: string, anteAmount: number): Promise<
     state.turnsInCurrentRound = 0;
     state.handResults         = undefined;
     state.whispers            = [];
+    state.actionLog           = [];
     state.lastActionLog       = undefined;
 
     await saveDropState(channelId, state);
@@ -352,7 +371,7 @@ export async function performScavenge(
         logText = `Scavenged a card from ${getPlayerName(state, targetPlayerId!)}'s hand`;
     }
 
-    state.lastActionLog = { subjectId: playerId, text: logText };
+    addActionLog(state, playerId, logText);
     await saveDropState(channelId, state);
     return true;
 }
@@ -394,7 +413,7 @@ export async function performDive(
     const judge = advanceTurn(state);
     if (judge) evaluateJudgementSync(state);
 
-    state.lastActionLog = { subjectId: playerId, text: 'Dove into the sump for new cards' };
+    addActionLog(state, playerId, 'Dove into the sump for new cards');
     await saveDropState(channelId, state);
     return true;
 }
@@ -430,7 +449,7 @@ export async function performAscend(
         playersResponded: [playerId] // initiator already responded
     };
 
-    state.lastActionLog = { subjectId: playerId, text: `Ascended (+${raiseAmount})` };
+    addActionLog(state, playerId, `Ascended (+${raiseAmount})`);
     await saveDropState(channelId, state);
     return true;
 }
@@ -476,7 +495,7 @@ export async function respondToAscend(
         if (judge) evaluateJudgementSync(state);
     }
 
-    state.lastActionLog = { subjectId: playerId, text: response === 'Call' ? 'Climbed' : 'Went to the Bridge' };
+    addActionLog(state, playerId, response === 'Call' ? 'Climbed' : 'Went to the Bridge');
     await saveDropState(channelId, state);
     return true;
 }
@@ -502,7 +521,7 @@ export async function performSnitch(
     const judge = advanceTurn(state);
     if (judge) evaluateJudgementSync(state);
 
-    state.lastActionLog = { subjectId: playerId, text: `Snitched on ${getPlayerName(state, targetId)}`, targetId };
+    addActionLog(state, playerId, `Snitched on ${getPlayerName(state, targetId)}`, targetId);
     await saveDropState(channelId, state);
     return true;
 }
@@ -541,7 +560,7 @@ export async function performSabotage(
     const judge = advanceTurn(state);
     if (judge) evaluateJudgementSync(state);
 
-    state.lastActionLog = { subjectId: playerId, text: `Sabotaged ${getPlayerName(state, targetId)}`, targetId };
+    addActionLog(state, playerId, `Sabotaged ${getPlayerName(state, targetId)}`, targetId);
     await saveDropState(channelId, state);
     return true;
 }
@@ -571,7 +590,7 @@ export async function performSmuggle(
         status: 'WaitingForResponses'
     };
 
-    state.lastActionLog = { subjectId: playerId, text: `Smuggled a ${declaredRank}` };
+    addActionLog(state, playerId, `Smuggled a ${declaredRank}`);
     await saveDropState(channelId, state);
     return true;
 }
@@ -593,7 +612,7 @@ export async function passSmuggle(channelId: string, playerId: string): Promise<
         smuggle.status = 'ResolvingDecree';
         await resolveSmuggle(state);
     }
-    state.lastActionLog = { subjectId: playerId, text: `Let the smuggle go through` };
+    addActionLog(state, playerId, `Let the smuggle go through`);
     await saveDropState(channelId, state);
 }
 
@@ -608,7 +627,7 @@ export async function challengeSmuggle(channelId: string, challengerId: string):
     state.pendingSmuggle.status = 'ResolvingChallenge';
 
     await resolveSmuggle(state, challengerId);
-    state.lastActionLog = { subjectId: challengerId, text: `Challenged the Smuggle` };
+    addActionLog(state, challengerId, `Challenged the Smuggle`);
     await saveDropState(channelId, state);
 }
 
@@ -631,14 +650,17 @@ async function resolveSmuggle(state: DropGameState, challengerId?: string) {
         const loser = toldTruth ? accuser : smuggler;
         const winner = toldTruth ? smuggler : accuser;
 
-        // The loser suffers the consequence of the actual dropped card's rank
-        switch (smuggle.actualCard.rank) {
-            case 'Baron':
+        // The loser suffers the consequence of the DECLARED rank, not the actual card.
+        // (Declaring Hollow and getting caught = elimination, regardless of what you really played.)
+        switch (smuggle.declaredRank) {
+            case 'Baron': {
                 // Loser matches the current value of the pot
-                loser.balance -= state.pot;
-                loser.totalContribution += state.pot;
-                state.pot *= 2;
+                const payment = Math.min(loser.balance, state.pot);
+                loser.balance -= payment;
+                loser.totalContribution += payment;
+                state.pot += payment;
                 break;
+            }
             case 'Warden': {
                 // Loser must discard all baron cards in their hand then redraw
                 const barons = loser.hand.filter(c => c.rank === 'Baron');
@@ -695,6 +717,17 @@ async function resolveSmuggle(state: DropGameState, challengerId?: string) {
                 return; // End early, bypassing the decree
             }
         }
+        // Auto-skip Hollow if no active player has a revealed card
+        else if (declaredRank === 'Hollow') {
+            const hasRevealedTarget = getActivePlayers(state).some(id =>
+                state.players[id].hand.some(c => c.isRevealed)
+            );
+            if (!hasRevealedTarget) {
+                const judge = advanceTurn(state);
+                if (judge) evaluateJudgementSync(state);
+                return;
+            }
+        }
         // Auto-skip Citizen if the discard pile is empty
         else if (declaredRank === 'Citizen') {
             if (state.discardPile.length === 0) {
@@ -733,8 +766,7 @@ export async function executeDecreeBaron(channelId: string, smugglerId: string, 
     // Add the result to the Whispers log
     const text = `truthfully announces their hand contains: ${ranksString}.`;
 
-    if (!state.whispers) state.whispers = [];
-    state.whispers.push({ subjectId: targetId, text });
+    addWhisperLog(state, targetId, text);
 
     // Clean up pending decree and advance
     state.pendingDecree = undefined;
@@ -742,7 +774,7 @@ export async function executeDecreeBaron(channelId: string, smugglerId: string, 
     const judge = advanceTurn(state);
     if (judge) evaluateJudgementSync(state);
 
-    state.lastActionLog = { subjectId: smugglerId, text: `Executed the Baron's Decree on ${getPlayerName(state, targetId)}` };
+    addActionLog(state, smugglerId, `Executed the Baron's Decree on ${getPlayerName(state, targetId)}`);
     await saveDropState(channelId, state);
     return true;
 }
@@ -772,8 +804,7 @@ export async function executeDecreeWarden(channelId: string, smugglerId: string,
         ? "declares their score is 20 or greater."
         : "declares their score is strictly less than 20.";
 
-    if (!state.whispers) state.whispers = [];
-    state.whispers.push({ subjectId: targetId, text });
+    addWhisperLog(state, targetId, text);
 
     // Clean up pending decree and advance
     state.pendingDecree = undefined;
@@ -781,7 +812,7 @@ export async function executeDecreeWarden(channelId: string, smugglerId: string,
     const judge = advanceTurn(state);
     if (judge) evaluateJudgementSync(state);
 
-    state.lastActionLog = { subjectId: smugglerId, text: `Executed the Warden's Decree on ${getPlayerName(state, targetId)}` };
+    addActionLog(state, smugglerId, `Executed the Warden's Decree on ${getPlayerName(state, targetId)}`);
     await saveDropState(channelId, state);
     return true;
 }
@@ -825,7 +856,7 @@ export async function executeDecreeCitizen(
     const judge = advanceTurn(state);
     if (judge) evaluateJudgementSync(state);
 
-    state.lastActionLog = { subjectId: smugglerId, text: `Executed the Citizen's Decree` };
+    addActionLog(state, smugglerId, `Executed the Citizen's Decree`);
     await saveDropState(channelId, state);
     return true;
 }
@@ -858,7 +889,7 @@ export async function executeDecreeGlowWorm(channelId: string, smugglerId: strin
     const judge = advanceTurn(state);
     if (judge) evaluateJudgementSync(state);
 
-    state.lastActionLog = { subjectId: smugglerId, text: `Executed the Glow Worm's Decree on ${getPlayerName(state, targetId)}` };
+    addActionLog(state, smugglerId, `Executed the Glow Worm's Decree on ${getPlayerName(state, targetId)}`);
     await saveDropState(channelId, state);
     return true;
 }
@@ -873,19 +904,20 @@ export async function executeDecreeHollow(channelId: string, smugglerId: string,
     if (state.pendingDecree.step !== 'AwaitingChoice') return false;
 
     const target = state.players[targetId];
-    if (!target || target.isDead || target.hasFolded || target.hand.length === 0) return false;
+    if (!target || target.isDead || target.hasFolded) return false;
 
-    // Find the highest value card in the target's hand
-    let highestIndex = 0;
-    for (let i = 1; i < target.hand.length; i++) {
-        if (target.hand[i].value > target.hand[highestIndex].value) {
-            highestIndex = i;
-        }
-    }
+    // Only revealed cards are eligible — target must have at least one
+    const revealedIndices = target.hand
+        .map((c, i) => ({ card: c, i }))
+        .filter(({ card }) => card.isRevealed);
+    if (revealedIndices.length === 0) return false;
 
-    // Discard their highest card [cite: 67]
-    const discardedCard = target.hand.splice(highestIndex, 1)[0];
-    discardedCard.isRevealed = true; // Discards are face-up
+    // Find the highest-value revealed card
+    const highestEntry = revealedIndices.reduce((best, cur) =>
+        cur.card.value > best.card.value ? cur : best
+    );
+
+    const discardedCard = target.hand.splice(highestEntry.i, 1)[0];
     state.discardPile.push(discardedCard);
 
     // Clean up the pending decree state and advance the turn
@@ -894,7 +926,7 @@ export async function executeDecreeHollow(channelId: string, smugglerId: string,
     const judge = advanceTurn(state);
     if (judge) evaluateJudgementSync(state);
 
-    state.lastActionLog = { subjectId: smugglerId, text: `Executed the Hollow One's Decree on ${getPlayerName(state, targetId)}` };
+    addActionLog(state, smugglerId, `Executed the Hollow One's Decree on ${getPlayerName(state, targetId)}`);
     await saveDropState(channelId, state);
     return true;
 }
@@ -913,9 +945,7 @@ export async function kickPlayer(channelId: string, hostId: string, targetId: st
     // Set the flag forcing the table to close
     state.forceLobby = true;
 
-    // Announce the kick in whispers
-    if (!state.whispers) state.whispers = [];
-    state.whispers.push({ subjectId: targetId, text: "was kicked by the Host. The table will close." });
+    addWhisperLog(state, targetId, "was kicked by the Host. The table will close.");
 
     // Resolve any pending asynchronous blocks they might be holding up
     if (state.pendingAscend && !state.pendingAscend.playersResponded.includes(targetId)) {

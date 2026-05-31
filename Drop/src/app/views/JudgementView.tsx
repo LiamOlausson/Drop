@@ -58,7 +58,6 @@ export const JudgementView: React.FC<JudgementViewProps> = ({ gameState, userId,
     const myResult = gameState.players[userId]?.handResult;
     const getName  = (id: string) => gameState.assignedNames?.[id] || playerNames[id] || id.substring(0, 10) + '…';
     const isHost = gameState.hostId === userId || (!gameState.hostId && gameState.turnOrder[0] === userId);
-    const isLeader = gameState.turnOrder[gameState.handLeaderIndex] === userId;
     const [anteAmount, setAnteAmount] = useState<number>(gameState.baseAnte || 10);
 
     const brokeIds   = gameState.turnOrder.filter(id => gameState.players[id].balance < anteAmount);
@@ -293,7 +292,7 @@ export const JudgementView: React.FC<JudgementViewProps> = ({ gameState, userId,
 
                 {/* Action buttons */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 16, alignItems: 'center', paddingTop: 4 }}>
-                    {(isHost || isLeader) && !gameState.forceLobby && (
+                    {isHost && !gameState.forceLobby && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'center', paddingTop: 4 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                 <span style={{ fontFamily: 'Cinzel, serif', fontSize: 12, color: '#c9ad87', textTransform: 'uppercase' }}>Next Ante:</span>
@@ -331,8 +330,7 @@ export const JudgementView: React.FC<JudgementViewProps> = ({ gameState, userId,
                     )}
 
                     <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
-                        {/* Allow Leader or Host to start the next hand */}
-                        {(isHost || isLeader) && !gameState.forceLobby && (
+                        {isHost && !gameState.forceLobby && (
                             <button
                                 disabled={!canStart}
                                 onClick={() => canStart && executeAction('StartHand', { anteAmount })}
