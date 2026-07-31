@@ -62,7 +62,7 @@ The entire app runs as a single Node.js process serving both the API and the com
    cd Drop-Real/Drop
    ```
 
-2. Create a `.env` file:
+2. Create a `.env` file: 
    ```
    VITE_DISCORD_CLIENT_ID=your_application_id
    DISCORD_CLIENT_SECRET=your_client_secret
